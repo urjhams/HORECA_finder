@@ -1,4 +1,5 @@
 # HORECA Distributor Finder - Environment Configuration
+# remove "_" from this file name to create .env file
 
 # Google Maps API Key (REQUIRED)
 # Get from: https://console.cloud.google.com/

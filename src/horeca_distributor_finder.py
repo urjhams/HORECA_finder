@@ -39,7 +39,7 @@ class Config:
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")  # Optional: for LLM classification
 
     # Google Maps API settings
-    GOOGLE_MAPS_BASE_URL = "https://maps.googleapis.com/maps/api/place/textsearch/json"
+    GOOGLE_MAPS_BASE_URL = "https://places.googleapis.com/v1/places:searchText"
     RATE_LIMIT_DELAY = 1.0  # seconds between requests
     JITTER_RANGE = (0, 0.5)  # random delay variance
 
@@ -157,7 +157,7 @@ class GoogleMapsScraper:
 
     def search_text(self, query: str, lat: float, lng: float, radius: int) -> List[Dict]:
         """
-        Perform a text search on Google Maps API
+        Perform a text search on Google Maps API (New Places API v1)
 
         Args:
             query: Search query string
@@ -172,40 +172,55 @@ class GoogleMapsScraper:
         page_token = None
         page_count = 0
 
+        headers = {
+            "X-Goog-Api-Key": self.api_key,
+            "Content-Type": "application/json",
+            "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.websiteUri,places.internationalPhoneNumber,places.addressComponents,places.location,places.rating,places.userRatingCount,places.priceLevel,places.types,nextPageToken"
+        }
+
         while page_count < Config.MAX_PAGES_PER_QUERY:
             # Add jitter to avoid rate limiting
             delay = Config.RATE_LIMIT_DELAY + random.uniform(*Config.JITTER_RANGE)
             time.sleep(delay)
 
-            # Build request parameters
-            params = {
-                "query": query,
-                "location": f"{lat},{lng}",
-                "radius": radius * 1000,  # Convert km to meters
-                "key": self.api_key,
-                "type": "establishment",
+            # Build request payload
+            payload = {
+                "textQuery": query,
+                "locationBias": {
+                    "circle": {
+                        "center": {"latitude": lat, "longitude": lng},
+                        "radius": radius * 1000.0  # Convert km to meters (ensure float)
+                    }
+                },
+                "maxResultCount": 20
             }
 
             if page_token:
-                params["pagetoken"] = page_token
+                payload["pageToken"] = page_token
 
             # Make request
             try:
-                response = self.session.get(self.base_url, params=params, timeout=10)
+                response = self.session.post(self.base_url, headers=headers, json=payload, timeout=10)
+                
+                # Check for errors and print details if any
+                if response.status_code != 200:
+                    print(f"    ❌ Error: {response.status_code} {response.reason}")
+                    print(f"    ❌ Response: {response.text}")
+                
                 response.raise_for_status()
                 data = response.json()
 
                 self.call_count += 1
 
                 # Extract results
-                if "results" in data:
-                    for place in data["results"]:
+                if "places" in data:
+                    for place in data["places"]:
                         result = self._parse_place(place, query)
                         results.append(result)
                         self.total_results += 1
 
                 # Check for next page
-                page_token = data.get("next_page_token")
+                page_token = data.get("nextPageToken")
                 page_count += 1
 
                 if not page_token:
@@ -221,25 +236,47 @@ class GoogleMapsScraper:
         """Extract and normalize place data"""
 
         # Extract address components
-        formatted_address = place.get("formatted_address", "")
-        address_parts = formatted_address.split(",")
-        street = address_parts[0] if len(address_parts) > 0 else ""
-        city = address_parts[1].strip() if len(address_parts) > 1 else ""
-        postal_code = address_parts[2].strip() if len(address_parts) > 2 else ""
+        formatted_address = place.get("formattedAddress", "")
+        
+        # Parse address components for postal code and city
+        postal_code = ""
+        city = ""
+        street = ""
+        
+        # Try to extract from address components (more reliable)
+        comps = place.get("addressComponents", [])
+        for c in comps:
+            types = c.get("types", [])
+            if "postal_code" in types:
+                postal_code = c.get("longText", "") or c.get("text", "")
+            elif "locality" in types:
+                city = c.get("longText", "") or c.get("text", "")
+            elif "route" in types:
+                street = c.get("longText", "") or c.get("text", "")
+        
+        # Fallback to string splitting if components fail
+        if not city or not postal_code:
+            address_parts = formatted_address.split(",")
+            if not street and len(address_parts) > 0:
+                street = address_parts[0].strip()
+            if not city and len(address_parts) > 1:
+                city = address_parts[1].strip()
+            if not postal_code and len(address_parts) > 2:
+                postal_code = address_parts[2].strip()
 
         return {
-            "id": place.get("place_id"),
-            "company_name": place.get("name", ""),
+            "id": place.get("id"),
+            "company_name": place.get("displayName", {}).get("text", ""),
             "street_address": street,
             "city": city,
             "postal_code": postal_code,
             "full_address": formatted_address,
-            "latitude": place.get("geometry", {}).get("location", {}).get("lat"),
-            "longitude": place.get("geometry", {}).get("location", {}).get("lng"),
-            "phone": place.get("formatted_phone_number", ""),
-            "website": place.get("website", ""),
+            "latitude": place.get("location", {}).get("latitude"),
+            "longitude": place.get("location", {}).get("longitude"),
+            "phone": place.get("internationalPhoneNumber", ""),
+            "website": place.get("websiteUri", ""),
             "rating": place.get("rating"),
-            "review_count": place.get("user_ratings_total", 0),
+            "review_count": place.get("userRatingCount", 0),
             "types": ",".join(place.get("types", [])),
             "source": "google_maps_textsearch",
             "search_query": query,

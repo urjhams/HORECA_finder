@@ -47,16 +47,33 @@ class Config:
     MAX_PAGES_PER_QUERY = 3  # 20 results per page, so 3 = 60 results max
 
     # File paths
+    BASE_DIR = "."
     RAW_LEADS_FILE = "1_raw_leads.csv"
     DEDUPED_LEADS_FILE = "2_deduped_leads.csv"
     CLASSIFIED_LEADS_FILE = "3_classified_leads.csv"
     FINAL_PROSPECTS_FILE = "FINAL_HORECA_PROSPECTS.csv"
 
+    @classmethod
+    def set_output_dir(cls, output_dir: str = None):
+        """Set output directory for files"""
+        if output_dir:
+            # Create base directory: {output_dir}/base
+            cls.BASE_DIR = os.path.join(output_dir, "base")
+            os.makedirs(cls.BASE_DIR, exist_ok=True)
+            print(f"📂 Output directory set to: {cls.BASE_DIR}")
+        else:
+            cls.BASE_DIR = "."
+            
+        cls.RAW_LEADS_FILE = os.path.join(cls.BASE_DIR, "1_raw_leads.csv")
+        cls.DEDUPED_LEADS_FILE = os.path.join(cls.BASE_DIR, "2_deduped_leads.csv")
+        cls.CLASSIFIED_LEADS_FILE = os.path.join(cls.BASE_DIR, "3_classified_leads.csv")
+        cls.FINAL_PROSPECTS_FILE = os.path.join(cls.BASE_DIR, "FINAL_HORECA_PROSPECTS.csv")
+
     # Deduplication thresholds
     FUZZY_MATCH_THRESHOLD = 85  # 0-100 for company name similarity
 
     # Classification
-    ENABLE_AI_CLASSIFICATION = False  # Set to True if you have OpenAI key
+    ENABLE_AI_CLASSIFICATION = True  # Set to True if you have OpenAI key
 
 
 # ============================================================================
@@ -625,6 +642,14 @@ class FileManager:
 
 def main():
     """Run the complete pipeline"""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="HORECA Distributor Finder")
+    parser.add_argument("output_dir", nargs="?", help="Optional output directory name")
+    args = parser.parse_args()
+
+    # Set output directory if provided
+    Config.set_output_dir(args.output_dir)
 
     print("\n" + "🚀 "*35)
     print("HORECA FROZEN POULTRY DISTRIBUTOR FINDER")

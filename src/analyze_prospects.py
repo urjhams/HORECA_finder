@@ -164,14 +164,51 @@ def main():
     """Interactive analysis tool"""
 
     import os
+    import argparse
 
-    # Find CSV file
-    csv_file = "FINAL_HORECA_PROSPECTS.csv"
+    parser = argparse.ArgumentParser(description="HORECA Prospect Analysis Tool")
+    parser.add_argument("output_dir", nargs="?", help="Optional output directory name")
+    args = parser.parse_args()
 
-    if not os.path.exists(csv_file):
-        print(f"❌ File not found: {csv_file}")
-        print("\nPlease run: python horeca_distributor_finder.py")
+    # Determine file paths and search for input CSV
+    potential_paths = []
+    
+    if args.output_dir:
+        # If directory provided, prioritize structure inside it
+        potential_paths.append(os.path.join(args.output_dir, "base", "FINAL_HORECA_PROSPECTS.csv"))
+        potential_paths.append(os.path.join(args.output_dir, "FINAL_HORECA_PROSPECTS.csv"))
+        
+        # Set output directory
+        output_dir = os.path.join(args.output_dir, "output")
+        print(f"📂 Target directory: {args.output_dir}")
+    else:
+        # Default to current directory
+        potential_paths.append("FINAL_HORECA_PROSPECTS.csv")
+        potential_paths.append(os.path.join("base", "FINAL_HORECA_PROSPECTS.csv"))
+        
+        output_dir = "."
+
+    # Find first existing file
+    csv_file = None
+    for path in potential_paths:
+        if os.path.exists(path):
+            csv_file = path
+            break
+
+    if not csv_file:
+        print(f"❌ Input file 'FINAL_HORECA_PROSPECTS.csv' not found.")
+        print(f"   Checked locations:")
+        for p in potential_paths:
+            print(f"   - {p}")
+        print("\nPlease run 'horeca_distributor_finder.py' first to generate data.")
         return
+
+    # Create output directory if it doesn't exist (only if we have a valid input)
+    if args.output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        print(f"📂 Saving output to: {output_dir}")
+
+    print(f"✅ Found input file: {csv_file}")
 
     print("\n" + "🔍 "*35)
     print("HORECA PROSPECT ANALYSIS TOOL")
@@ -203,7 +240,9 @@ def main():
 
             save = input("\nExport to CSV? (y/n): ").strip().lower()
             if save == "y":
-                analyzer.export_filtered(top, "filtered_top20.csv")
+                filename = "filtered_top20.csv"
+                filepath = os.path.join(output_dir, filename)
+                analyzer.export_filtered(top, filepath)
 
         elif choice == "2":
             country = input("Enter country (Germany/Spain/France): ").strip()
@@ -211,7 +250,9 @@ def main():
 
             save = input("Export to CSV? (y/n): ").strip().lower()
             if save == "y":
-                analyzer.export_filtered(filtered, f"filtered_{country}.csv")
+                filename = f"filtered_{country}.csv"
+                filepath = os.path.join(output_dir, filename)
+                analyzer.export_filtered(filtered, filepath)
 
         elif choice == "3":
             rating = float(input("Minimum rating (e.g., 4.0): ").strip())
@@ -219,21 +260,27 @@ def main():
 
             save = input("Export to CSV? (y/n): ").strip().lower()
             if save == "y":
-                analyzer.export_filtered(filtered, f"filtered_rating{rating}.csv")
+                filename = f"filtered_rating{rating}.csv"
+                filepath = os.path.join(output_dir, filename)
+                analyzer.export_filtered(filtered, filepath)
 
         elif choice == "4":
             filtered = analyzer.filter_by_contact_info(require_phone=True)
 
             save = input("Export to CSV? (y/n): ").strip().lower()
             if save == "y":
-                analyzer.export_filtered(filtered, "filtered_with_phone.csv")
+                filename = "filtered_with_phone.csv"
+                filepath = os.path.join(output_dir, filename)
+                analyzer.export_filtered(filtered, filepath)
 
         elif choice == "5":
             filtered = analyzer.filter_by_contact_info(require_website=True)
 
             save = input("Export to CSV? (y/n): ").strip().lower()
             if save == "y":
-                analyzer.export_filtered(filtered, "filtered_with_website.csv")
+                filename = "filtered_with_website.csv"
+                filepath = os.path.join(output_dir, filename)
+                analyzer.export_filtered(filtered, filepath)
 
         elif choice == "6":
             keyword = input("Enter company name or keyword: ").strip()

@@ -1,0 +1,20 @@
+# HORECA Distributor Finder - Python Dependencies
+
+# HTTP requests
+requests>=2.31.0
+
+# Fuzzy string matching for deduplication
+fuzzywuzzy>=0.18.0
+python-Levenshtein>=0.21.1
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# OpenAI API (optional - only if using AI classification)
+openai>=1.0.0
+
+# Data processing
+pandas>=2.0.0  # Optional but helpful for data analysis
+
+# Progress bars (optional but nice to have)
+tqdm>=4.66.0

@@ -74,6 +74,7 @@ class Config:
 
     # Classification
     ENABLE_AI_CLASSIFICATION = False  # Default to False, enable via flag
+    BATCH_SIZE = 5  # Number of records to classify in one API call
 
 
 # ============================================================================
@@ -390,92 +391,92 @@ class AIClassifier:
         self.call_count = 0
 
     @staticmethod
-    def generate_prompt(record: Dict) -> str:
-        """Generate classification prompt for a record"""
+    def generate_batch_prompt(records: List[Dict]) -> str:
+        """Generate classification prompt for a batch of records"""
+        
+        prompt = """
+You are a B2B foodservice analyst. Analyze these businesses and determine if they are a good fit for selling frozen crispy duck/chicken to Asian restaurants (Vietnamese/Chinese) in HORECA (Hotel/Restaurant/Catering) channel.
 
-        prompt = f"""
-            You are a B2B foodservice analyst. Analyze this business and determine if it's a good fit for selling frozen crispy duck/chicken to Asian restaurants (Vietnamese/Chinese) in HORECA (Hotel/Restaurant/Catering) channel.
+Records to analyze:
+"""
+        for i, record in enumerate(records):
+            prompt += f"""
+--- Record {i+1} ---
+ID: {record.get('id', 'N/A')}
+Company Name: {record.get('company_name', 'Unknown')}
+Address: {record.get('full_address', 'Unknown')}
+Website: {record.get('website', 'N/A')}
+Phone: {record.get('phone', 'N/A')}
+Business Types: {record.get('types', 'N/A')}
+"""
 
-            Company Name: {record.get('company_name', 'Unknown')}
-            Address: {record.get('full_address', 'Unknown')}
-            Website: {record.get('website', 'N/A')}
-            Phone: {record.get('phone', 'N/A')}
-            Business Types: {record.get('types', 'N/A')}
+        prompt += """
+For EACH record, return a JSON object with these fields:
+1. record_index (int): The record number (1, 2, 3...) matching the input.
+2. is_horeca_distributor (true/false): Does this appear to supply restaurants/catering/foodservice?
+3. is_ethnic_asian (true/false): Is this Vietnamese, Chinese, or pan-Asian food focused?
+4. likely_frozen_poultry (true/false): Does it likely stock frozen poultry (duck/chicken)?
+5. priority_score (1-10): Overall fit score (10 = perfect fit, 1 = unlikely fit)
+6. contact_recommendation (text): Brief recommendation on contacting this company
 
-            Based on available information, classify:
-
-            1. is_horeca_distributor (true/false): Does this appear to supply restaurants/catering/foodservice?
-            2. is_ethnic_asian (true/false): Is this Vietnamese, Chinese, or pan-Asian food focused?
-            3. likely_frozen_poultry (true/false): Does it likely stock frozen poultry (duck/chicken)?
-            4. priority_score (1-10): Overall fit score (10 = perfect fit, 1 = unlikely fit)
-            5. contact_recommendation (text): Brief recommendation on contacting this company
-
-            Return ONLY valid JSON, no markdown:
-            {{
-                "is_horeca_distributor": bool,
-                "is_ethnic_asian": bool,
-                "likely_frozen_poultry": bool,
-                "priority_score": int,
-                "contact_recommendation": "text"
-            }}
-            """
+Return ONLY a valid JSON ARRAY containing objects for all records. No markdown formatting.
+Example:
+[
+  {"record_index": 1, "is_horeca_distributor": true, ...},
+  {"record_index": 2, "is_horeca_distributor": false, ...}
+]
+"""
         return prompt
 
-    def classify_record(self, record: Dict) -> Dict:
-        """Classify a single record using LLM"""
-
+    def classify_batch(self, records: List[Dict]) -> List[Dict]:
+        """Classify a batch of records using LLM"""
+        
         if not self.api_key:
-            print("⚠️  No OpenAI API key configured. Skipping AI classification.")
-            return {
-                "is_horeca_distributor": None,
-                "is_ethnic_asian": None,
-                "likely_frozen_poultry": None,
-                "priority_score": 5,
-                "contact_recommendation": "Requires manual review"
-            }
+            print("⚠️  No OpenAI API key configured. Skipping batch.")
+            return [{}] * len(records)
 
         try:
             from openai import OpenAI
             client = OpenAI(api_key=self.api_key)
 
-            prompt = self.generate_prompt(record)
+            prompt = self.generate_batch_prompt(records)
 
             response = client.chat.completions.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "You are a B2B foodservice analyst. Always return valid JSON."},
+                    {"role": "system", "content": "You are a B2B foodservice analyst. Always return a valid JSON array."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.2,
-                max_tokens=300
+                max_tokens=1000
             )
 
             result_text = response.choices[0].message.content.strip()
-            result = json.loads(result_text)
-
+            # Clean up potential markdown code blocks
+            if result_text.startswith("```json"):
+                result_text = result_text[7:]
+            if result_text.endswith("```"):
+                result_text = result_text[:-3]
+            
+            results_list = json.loads(result_text)
+            
             self.call_count += 1
-
-            return result
+            return results_list
 
         except Exception as e:
-            print(f"    ❌ Classification error: {str(e)}")
-            return {
-                "is_horeca_distributor": None,
-                "is_ethnic_asian": None,
-                "likely_frozen_poultry": None,
-                "priority_score": 5,
-                "contact_recommendation": "Error during classification"
-            }
+            print(f"    ❌ Batch classification error: {str(e)}")
+            # Return empty dicts for failed batch to maintain length alignment
+            return [{}] * len(records)
 
     def classify_all(self, records: List[Dict]) -> List[Dict]:
-        """Classify all records with resume capability and incremental saving"""
+        """Classify all records with resume capability, incremental saving, and batch processing"""
 
         if not Config.ENABLE_AI_CLASSIFICATION:
             print("\n⏭️  AI classification disabled. Skipping...")
             return records
 
         print("\n" + "="*70)
-        print("PHASE 3: AI CLASSIFICATION")
+        print("PHASE 3: AI CLASSIFICATION (BATCH MODE)")
         print("="*70)
 
         # Load existing progress if available
@@ -491,12 +492,6 @@ class AIClassifier:
                 uid = r.get("id") or f"{r.get('company_name')}_{r.get('city')}"
                 processed_ids.add(uid)
             print(f"⏩ Skipping {len(classified_leads)} already classified records.")
-        
-        # Also check final prospects file if classified file doesn't exist (in case of re-run)
-        elif os.path.exists(Config.FINAL_PROSPECTS_FILE):
-             # Only if we are sure it contains classified data? 
-             # For now, let's stick to the CLASSIFIED_LEADS_FILE as the source of truth for progress.
-             pass
 
         # Identify remaining records
         remaining_records = []
@@ -510,28 +505,49 @@ class AIClassifier:
             return classified_leads
 
         print(f"📊 Remaining to classify: {len(remaining_records)}")
+        print(f"📦 Batch size: {Config.BATCH_SIZE}")
 
-        # Process remaining records
-        for i, record in enumerate(remaining_records):
-            print(f"\n  Classifying {i+1}/{len(remaining_records)}: {record['company_name']}", end=" ... ", flush=True)
-
-            classification = self.classify_record(record)
-            record.update(classification)
+        # Process remaining records in batches
+        total_batches = (len(remaining_records) + Config.BATCH_SIZE - 1) // Config.BATCH_SIZE
+        
+        for i in range(0, len(remaining_records), Config.BATCH_SIZE):
+            batch_num = (i // Config.BATCH_SIZE) + 1
+            batch_records = remaining_records[i : i + Config.BATCH_SIZE]
             
-            # Add to main list
-            classified_leads.append(record)
+            print(f"\n  Processing Batch {batch_num}/{total_batches} ({len(batch_records)} records)...", end=" ", flush=True)
+            
+            # Call LLM
+            batch_results = self.classify_batch(batch_records)
+            
+            # Merge results back to records
+            success_count = 0
+            for j, record in enumerate(batch_records):
+                # Try to find matching result by index or order
+                # Since we asked for record_index, we can try to use it, but fallback to order
+                res = {}
+                if j < len(batch_results):
+                    res = batch_results[j]
+                
+                if res:
+                    record.update(res)
+                    success_count += 1
+                else:
+                    record["contact_recommendation"] = "Error/Skipped in batch"
+                
+                classified_leads.append(record)
 
-            print(f"Score: {classification.get('priority_score', 'N/A')}/10")
+            print(f"✅ {success_count}/{len(batch_records)} classified")
 
-            # Incremental save every 10 records
-            if (i + 1) % 10 == 0:
-                print(f"    💾 Saving progress ({len(classified_leads)} total)...")
-                FileManager.save_csv(classified_leads, Config.CLASSIFIED_LEADS_FILE)
+            # Incremental save after every batch
+            print(f"    💾 Saving progress ({len(classified_leads)} total)...")
+            FileManager.save_csv(classified_leads, Config.CLASSIFIED_LEADS_FILE)
 
-            # Rate limit: 3-4 requests per minute to avoid API throttling
-            time.sleep(20)
+            # Rate limit: 3-4 requests per minute (approx 15-20s delay)
+            # Since we process 5 records at once, we can wait a bit less per record effectively, 
+            # but let's keep it safe. 10s per batch = 6 batches/min = 30 records/min.
+            time.sleep(10)
 
-        print(f"\n✅ Total classifications in this run: {self.call_count}")
+        print(f"\n✅ Total batch calls: {self.call_count}")
         
         return classified_leads
 
@@ -553,7 +569,7 @@ class FileManager:
         fieldnames = list(records[0].keys())
 
         with open(filepath, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
             writer.writeheader()
             writer.writerows(records)
 

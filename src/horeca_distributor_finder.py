@@ -74,7 +74,7 @@ class Config:
 
     # Classification
     ENABLE_AI_CLASSIFICATION = False  # Default to False, enable via flag
-    BATCH_SIZE = 5  # Number of records to classify in one API call
+    BATCH_SIZE = 10  # Number of records to classify in one API call
 
 
 # ============================================================================

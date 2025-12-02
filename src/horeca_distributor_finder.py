@@ -73,89 +73,20 @@ class Config:
     FUZZY_MATCH_THRESHOLD = 85  # 0-100 for company name similarity
 
     # Classification
-    ENABLE_AI_CLASSIFICATION = True  # Set to True if you have OpenAI key
+    ENABLE_AI_CLASSIFICATION = False  # Default to False, enable via flag
 
 
 # ============================================================================
-# LOCATION DATA: 28 cities across 3 countries with tiered radius
+# LOCATION DATA & SEARCH QUERIES
 # ============================================================================
 
-SEARCH_LOCATIONS = {
-    "Germany": {
-        "tier_1": [  # 30 km radius (mega cities)
-            {"name": "Berlin", "lat": 52.52, "lng": 13.40, "radius": 30},
-            {"name": "Hamburg", "lat": 53.55, "lng": 10.00, "radius": 30},
-            {"name": "Munich", "lat": 48.14, "lng": 11.58, "radius": 30},
-            {"name": "Cologne", "lat": 50.94, "lng": 6.96, "radius": 30},
-        ],
-        "tier_2": [  # 25 km radius (large cities)
-            {"name": "Frankfurt", "lat": 50.11, "lng": 8.68, "radius": 25},
-            {"name": "Stuttgart", "lat": 48.78, "lng": 9.18, "radius": 25},
-            {"name": "Düsseldorf", "lat": 51.22, "lng": 6.78, "radius": 25},
-            {"name": "Leipzig", "lat": 51.34, "lng": 12.37, "radius": 25},
-        ],
-        "tier_3": [  # 20 km radius (medium cities)
-            {"name": "Nuremberg", "lat": 49.45, "lng": 11.08, "radius": 20},
-            {"name": "Hanover", "lat": 52.37, "lng": 9.73, "radius": 20},
-            {"name": "Bremen", "lat": 53.07, "lng": 8.81, "radius": 20},
-        ]
-    },
-    "Spain": {
-        "tier_1": [  # 30 km radius
-            {"name": "Barcelona", "lat": 41.39, "lng": 2.17, "radius": 30},
-            {"name": "Madrid", "lat": 40.42, "lng": -3.70, "radius": 30},
-        ],
-        "tier_2": [  # 25 km radius
-            {"name": "Valencia", "lat": 39.47, "lng": -0.38, "radius": 25},
-            {"name": "Seville", "lat": 37.39, "lng": -5.98, "radius": 25},
-            {"name": "Bilbao", "lat": 43.26, "lng": -2.92, "radius": 25},
-        ],
-        "tier_3": [  # 20 km radius
-            {"name": "Malaga", "lat": 36.72, "lng": -4.42, "radius": 20},
-            {"name": "Palma", "lat": 39.57, "lng": 2.65, "radius": 20},
-            {"name": "Zaragoza", "lat": 41.65, "lng": -0.88, "radius": 20},
-        ]
-    },
-    "France": {
-        "tier_1": [  # 30 km radius
-            {"name": "Paris", "lat": 48.86, "lng": 2.35, "radius": 30},
-            {"name": "Lyon", "lat": 45.76, "lng": 4.84, "radius": 30},
-        ],
-        "tier_2": [  # 25 km radius
-            {"name": "Marseille", "lat": 43.30, "lng": 5.37, "radius": 25},
-            {"name": "Toulouse", "lat": 43.60, "lng": 1.44, "radius": 25},
-        ],
-        "tier_3": [  # 20 km radius
-            {"name": "Nice", "lat": 43.70, "lng": 7.26, "radius": 20},
-            {"name": "Bordeaux", "lat": 44.84, "lng": -0.58, "radius": 20},
-            {"name": "Lille", "lat": 50.63, "lng": 3.06, "radius": 20},
-            {"name": "Strasbourg", "lat": 48.58, "lng": 7.75, "radius": 20},
-            {"name": "Nantes", "lat": 47.22, "lng": -1.55, "radius": 20},
-        ]
-    }
-}
-
-# Search queries per country (localized)
-SEARCH_QUERIES = {
-    "Germany": [
-        "Vietnamesische Lebensmittel Großhandel",
-        "Chinesischer Lebensmittel Großhandel",
-        "Asiatischer Tiefkühlkost Großhandel HORECA",
-        "Frozen duck importer HORECA",
-    ],
-    "Spain": [
-        "Distribuidor comida vietnamita",
-        "Importador alimentos chinos congelados",
-        "Mayorista comida asiática HORECA",
-        "Frozen poultry distributor",
-    ],
-    "France": [
-        "Grossiste alimentation vietnamienne",
-        "Distributeur aliments chinois surgelés",
-        "Fournisseur restaurant asiatique HORECA",
-        "Distributeur volaille surgelée",
-    ]
-}
+try:
+    from search_config import SEARCH_LOCATIONS, SEARCH_QUERIES
+except ImportError:
+    # Fallback or error handling if file is missing (though it should be there)
+    print("⚠️  Warning: src/search_config.py not found. Using empty configuration.")
+    SEARCH_LOCATIONS = {}
+    SEARCH_QUERIES = {}
 
 
 # ============================================================================
@@ -463,31 +394,31 @@ class AIClassifier:
         """Generate classification prompt for a record"""
 
         prompt = f"""
-You are a B2B foodservice analyst. Analyze this business and determine if it's a good fit for selling frozen crispy duck/chicken to Asian restaurants (Vietnamese/Chinese) in HORECA (Hotel/Restaurant/Catering) channel.
+            You are a B2B foodservice analyst. Analyze this business and determine if it's a good fit for selling frozen crispy duck/chicken to Asian restaurants (Vietnamese/Chinese) in HORECA (Hotel/Restaurant/Catering) channel.
 
-Company Name: {record.get('company_name', 'Unknown')}
-Address: {record.get('full_address', 'Unknown')}
-Website: {record.get('website', 'N/A')}
-Phone: {record.get('phone', 'N/A')}
-Business Types: {record.get('types', 'N/A')}
+            Company Name: {record.get('company_name', 'Unknown')}
+            Address: {record.get('full_address', 'Unknown')}
+            Website: {record.get('website', 'N/A')}
+            Phone: {record.get('phone', 'N/A')}
+            Business Types: {record.get('types', 'N/A')}
 
-Based on available information, classify:
+            Based on available information, classify:
 
-1. is_horeca_distributor (true/false): Does this appear to supply restaurants/catering/foodservice?
-2. is_ethnic_asian (true/false): Is this Vietnamese, Chinese, or pan-Asian food focused?
-3. likely_frozen_poultry (true/false): Does it likely stock frozen poultry (duck/chicken)?
-4. priority_score (1-10): Overall fit score (10 = perfect fit, 1 = unlikely fit)
-5. contact_recommendation (text): Brief recommendation on contacting this company
+            1. is_horeca_distributor (true/false): Does this appear to supply restaurants/catering/foodservice?
+            2. is_ethnic_asian (true/false): Is this Vietnamese, Chinese, or pan-Asian food focused?
+            3. likely_frozen_poultry (true/false): Does it likely stock frozen poultry (duck/chicken)?
+            4. priority_score (1-10): Overall fit score (10 = perfect fit, 1 = unlikely fit)
+            5. contact_recommendation (text): Brief recommendation on contacting this company
 
-Return ONLY valid JSON, no markdown:
-{{
-  "is_horeca_distributor": bool,
-  "is_ethnic_asian": bool,
-  "likely_frozen_poultry": bool,
-  "priority_score": int,
-  "contact_recommendation": "text"
-}}
-"""
+            Return ONLY valid JSON, no markdown:
+            {{
+                "is_horeca_distributor": bool,
+                "is_ethnic_asian": bool,
+                "likely_frozen_poultry": bool,
+                "priority_score": int,
+                "contact_recommendation": "text"
+            }}
+            """
         return prompt
 
     def classify_record(self, record: Dict) -> Dict:
@@ -504,12 +435,12 @@ Return ONLY valid JSON, no markdown:
             }
 
         try:
-            import openai
-            openai.api_key = self.api_key
+            from openai import OpenAI
+            client = OpenAI(api_key=self.api_key)
 
             prompt = self.generate_prompt(record)
 
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {"role": "system", "content": "You are a B2B foodservice analyst. Always return valid JSON."},
@@ -537,7 +468,7 @@ Return ONLY valid JSON, no markdown:
             }
 
     def classify_all(self, records: List[Dict]) -> List[Dict]:
-        """Classify all records"""
+        """Classify all records with resume capability and incremental saving"""
 
         if not Config.ENABLE_AI_CLASSIFICATION:
             print("\n⏭️  AI classification disabled. Skipping...")
@@ -547,20 +478,62 @@ Return ONLY valid JSON, no markdown:
         print("PHASE 3: AI CLASSIFICATION")
         print("="*70)
 
-        for i, record in enumerate(records):
-            print(f"\n  Classifying {i+1}/{len(records)}: {record['company_name']}", end=" ... ", flush=True)
+        # Load existing progress if available
+        classified_leads = []
+        processed_ids = set()
+        
+        # Check if we have an existing classified file to resume from
+        if os.path.exists(Config.CLASSIFIED_LEADS_FILE):
+            print(f"📂 Found existing classified leads file: {Config.CLASSIFIED_LEADS_FILE}")
+            classified_leads = FileManager.load_csv(Config.CLASSIFIED_LEADS_FILE)
+            for r in classified_leads:
+                # Use ID if available, otherwise fallback to name+city
+                uid = r.get("id") or f"{r.get('company_name')}_{r.get('city')}"
+                processed_ids.add(uid)
+            print(f"⏩ Skipping {len(classified_leads)} already classified records.")
+        
+        # Also check final prospects file if classified file doesn't exist (in case of re-run)
+        elif os.path.exists(Config.FINAL_PROSPECTS_FILE):
+             # Only if we are sure it contains classified data? 
+             # For now, let's stick to the CLASSIFIED_LEADS_FILE as the source of truth for progress.
+             pass
+
+        # Identify remaining records
+        remaining_records = []
+        for r in records:
+            uid = r.get("id") or f"{r.get('company_name')}_{r.get('city')}"
+            if uid not in processed_ids:
+                remaining_records.append(r)
+
+        if not remaining_records:
+            print("✅ All records already classified!")
+            return classified_leads
+
+        print(f"📊 Remaining to classify: {len(remaining_records)}")
+
+        # Process remaining records
+        for i, record in enumerate(remaining_records):
+            print(f"\n  Classifying {i+1}/{len(remaining_records)}: {record['company_name']}", end=" ... ", flush=True)
 
             classification = self.classify_record(record)
             record.update(classification)
+            
+            # Add to main list
+            classified_leads.append(record)
 
             print(f"Score: {classification.get('priority_score', 'N/A')}/10")
+
+            # Incremental save every 10 records
+            if (i + 1) % 10 == 0:
+                print(f"    💾 Saving progress ({len(classified_leads)} total)...")
+                FileManager.save_csv(classified_leads, Config.CLASSIFIED_LEADS_FILE)
 
             # Rate limit: 3-4 requests per minute to avoid API throttling
             time.sleep(20)
 
-        print(f"\n✅ Total classifications: {self.call_count}")
-
-        return records
+        print(f"\n✅ Total classifications in this run: {self.call_count}")
+        
+        return classified_leads
 
 
 # ============================================================================
@@ -646,10 +619,16 @@ def main():
 
     parser = argparse.ArgumentParser(description="HORECA Distributor Finder")
     parser.add_argument("output_dir", nargs="?", help="Optional output directory name")
+    parser.add_argument("--resume", action="store_true", help="Skip scraping/deduping and resume from existing deduped file")
+    parser.add_argument("--ai-classify", action="store_true", help="Enable AI classification (disabled by default)")
     args = parser.parse_args()
 
     # Set output directory if provided
     Config.set_output_dir(args.output_dir)
+    
+    # Override AI setting
+    if args.ai_classify:
+        Config.ENABLE_AI_CLASSIFICATION = True
 
     print("\n" + "🚀 "*35)
     print("HORECA FROZEN POULTRY DISTRIBUTOR FINDER")
@@ -662,18 +641,32 @@ def main():
         print("   Please set GOOGLE_MAPS_API_KEY environment variable or in config.")
         return
 
-    # ========== PHASE 1: SCRAPING ==========
-    scraper = GoogleMapsScraper(Config.GOOGLE_MAPS_API_KEY)
-    raw_leads = scraper.run_all_searches()
+    raw_leads = []
+    deduped_leads = []
 
-    # Save raw leads
-    FileManager.save_csv(raw_leads, Config.RAW_LEADS_FILE)
+    if args.resume:
+        print("\n⏩ RESUMING (Skipping Scraping & Deduplication)")
+        
+        if not os.path.exists(Config.DEDUPED_LEADS_FILE):
+            print(f"\n❌ ERROR: Deduped leads file not found: {Config.DEDUPED_LEADS_FILE}")
+            print("   Cannot resume. Please run without --resume first.")
+            return
 
-    # ========== PHASE 2: DEDUPLICATION ==========
-    deduped_leads = Deduplicator.deduplicate(raw_leads)
+        deduped_leads = FileManager.load_csv(Config.DEDUPED_LEADS_FILE)
+        
+    else:
+        # ========== PHASE 1: SCRAPING ==========
+        scraper = GoogleMapsScraper(Config.GOOGLE_MAPS_API_KEY)
+        raw_leads = scraper.run_all_searches()
 
-    # Save deduped leads
-    FileManager.save_csv(deduped_leads, Config.DEDUPED_LEADS_FILE)
+        # Save raw leads
+        FileManager.save_csv(raw_leads, Config.RAW_LEADS_FILE)
+
+        # ========== PHASE 2: DEDUPLICATION ==========
+        deduped_leads = Deduplicator.deduplicate(raw_leads)
+
+        # Save deduped leads
+        FileManager.save_csv(deduped_leads, Config.DEDUPED_LEADS_FILE)
 
     # ========== PHASE 3: AI CLASSIFICATION (OPTIONAL) ==========
     if Config.ENABLE_AI_CLASSIFICATION:
@@ -704,8 +697,10 @@ def main():
     print("✅ PIPELINE COMPLETE!")
     print("="*70)
     print(f"\nOutput files:")
-    print(f"  1. {Config.RAW_LEADS_FILE} (raw scraping results)")
-    print(f"  2. {Config.DEDUPED_LEADS_FILE} (after deduplication)")
+    if not args.resume:
+        print(f"  1. {Config.RAW_LEADS_FILE} (raw scraping results)")
+        print(f"  2. {Config.DEDUPED_LEADS_FILE} (after deduplication)")
+    
     if Config.ENABLE_AI_CLASSIFICATION:
         print(f"  3. {Config.CLASSIFIED_LEADS_FILE} (after AI classification)")
     print(f"  4. {Config.FINAL_PROSPECTS_FILE} (final prospects - MAIN FILE)")

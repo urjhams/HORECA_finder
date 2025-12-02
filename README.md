@@ -96,9 +96,36 @@ python horeca_distributor_finder.py
 
 ### 6. Run the Script
 
+**Basic Usage:**
 ```bash
-python horeca_distributor_finder.py
+.venv/bin/python src/horeca_distributor_finder.py
 ```
+
+**Advanced Usage:**
+
+1.  **Specify Output Directory:**
+    Save all results into a specific folder (e.g., `my_project/base/`):
+    ```bash
+    .venv/bin/python src/horeca_distributor_finder.py my_project
+    ```
+
+2.  **Resume from Previous Run:**
+    Skip scraping and deduplication (uses existing `2_deduped_leads.csv`):
+    ```bash
+    .venv/bin/python src/horeca_distributor_finder.py --resume
+    ```
+
+3.  **Enable AI Classification:**
+    By default, AI classification is OFF. To enable it (requires OpenAI key):
+    ```bash
+    .venv/bin/python src/horeca_distributor_finder.py --ai-classify
+    ```
+
+4.  **Resume + AI Classification (Recommended for retrying AI):**
+    This skips scraping and resumes AI classification where it left off (saves progress every 10 records):
+    ```bash
+    .venv/bin/python src/horeca_distributor_finder.py --resume --ai-classify
+    ```
 
 Expected output:
 
@@ -342,8 +369,7 @@ If script fails:
 ```
 horeca_distributor_finder.py
 ├── Config class           - Settings & API keys
-├── SEARCH_LOCATIONS       - 28 cities with coordinates
-├── SEARCH_QUERIES         - Localized search terms
+├── search_config.py       - Search locations & queries (NEW)
 ├── GoogleMapsScraper      - Phase 1: Scraping
 ├── Deduplicator           - Phase 2: Deduplication
 ├── AIClassifier           - Phase 3: AI classification

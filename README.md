@@ -266,6 +266,15 @@ To classify leads by priority (1–10 score):
 
 **Cost:** ~$20–30 for 1,000 classifications
 
+### AI Classification Optimization (Batch Processing)
+
+The script uses **Batch Processing** (default `BATCH_SIZE = 10`) to optimize costs and speed.
+
+-   **Why 10?** It's the "sweet spot" for efficiency.
+    -   **Cost Reduction:** Sending 10 records in one prompt reduces input token costs by ~80% compared to single-record processing (amortizing system instructions).
+    -   **Speed:** Reduces API requests by 10x, avoiding rate limits.
+    -   **Stability:** Going larger (e.g., 50) risks timeouts and JSON parsing errors.
+
 ---
 
 ## Troubleshooting

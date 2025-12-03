@@ -18,9 +18,8 @@ import json
 import time
 import random
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict
 from fuzzywuzzy import fuzz
-from fuzzywuzzy import process
 import os
 from dotenv import load_dotenv
 
@@ -82,10 +81,10 @@ class Config:
 # ============================================================================
 
 try:
-    from search_config import SEARCH_LOCATIONS, SEARCH_QUERIES
+    from search_config_horeca import SEARCH_LOCATIONS, SEARCH_QUERIES
 except ImportError:
     # Fallback or error handling if file is missing (though it should be there)
-    print("⚠️  Warning: src/search_config.py not found. Using empty configuration.")
+    print("⚠️  Warning: src/search_config_horeca.py not found. Using empty configuration.")
     SEARCH_LOCATIONS = {}
     SEARCH_QUERIES = {}
 

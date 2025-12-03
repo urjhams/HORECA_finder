@@ -7,7 +7,7 @@ End-to-end pipeline:
 3. AI Classification via LLM (OpenAI/Gemini)
 4. Export final prospect list
 
-Author: Your Name
+Author: Quan Dinh
 Date: 2025-12-02
 """
 

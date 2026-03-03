@@ -3,6 +3,9 @@
 # HTTP requests
 requests>=2.31.0
 
+# HTML parsing for email extraction
+beautifulsoup4>=4.12.0
+
 # Fuzzy string matching for deduplication
 fuzzywuzzy>=0.18.0
 python-Levenshtein>=0.21.1

@@ -1,14 +1,16 @@
 """
-HORECA Frozen Poultry Distributor Finder
-=========================================
+Germany Restaurant Finder for B2B Supplies
+===========================================
 End-to-end pipeline:
-1. Google Maps Text Search API (scraping)
+1. Google Maps Text Search API (scraping restaurants across Germany)
 2. Deduplication (fuzzy matching + normalization)
-3. AI Classification via LLM (OpenAI/Gemini)
-4. Export final prospect list
+3. AI Classification via LLM (Gemini) - categorize by restaurant type
+4. Export final prospect list (Chinese, Vietnamese, Turkish restaurants)
+
+Target: Small-medium restaurants, bistros needing hand towels and paper boxes
 
 Author: Quan Dinh
-Date: 2025-12-02
+Date: 2026-03-03
 """
 
 import os
@@ -89,11 +91,20 @@ except ImportError:
 # PROMPT GENERATOR
 # ============================================================================
 
-def generate_horeca_prompt(records: List[Dict]) -> str:
-    """Generate classification prompt for HORECA distributors"""
+def generate_restaurant_classification_prompt(records: List[Dict]) -> str:
+    """Generate classification prompt for restaurant categorization"""
     
     prompt = """
-You are a B2B foodservice analyst. Analyze these businesses and determine if they are a good fit for selling frozen crispy duck/chicken to Asian restaurants (Vietnamese/Chinese) in HORECA (Hotel/Restaurant/Catering) channel.
+You are a B2B sales analyst specializing in restaurant supplies. Analyze these businesses and classify them by restaurant type to determine if they are good prospects for selling hand towels and paper boxes (disposable packaging supplies).
+
+Target Customers:
+- Chinese restaurants (bistros, quick-service, gastronomy)
+- Vietnamese restaurants (bistros, quick-service, gastronomy)  
+- Turkish restaurants (döner shops, bistros, quick-service, gastronomy)
+
+Focus on small-to-medium restaurants, bistros, and quick-service establishments that need:
+- Hand towels (paper towels for customers/kitchen)
+- Paper boxes (takeaway packaging, food containers)
 
 Records to analyze:
 """
@@ -106,22 +117,32 @@ Records to analyze:
         Website: {record.get('website', 'N/A')}
         Phone: {record.get('phone', 'N/A')}
         Business Types: {record.get('types', 'N/A')}
+        Rating: {record.get('rating', 'N/A')}
+        Reviews: {record.get('review_count', 'N/A')}
         """
 
     prompt += """
     For EACH record, return a JSON object with these fields:
     1. record_index (int): The record number (1, 2, 3...) matching the input.
-    2. is_horeca_distributor (true/false): Does this appear to supply restaurants/catering/foodservice?
-    3. is_ethnic_asian (true/false): Is this Vietnamese, Chinese, or pan-Asian food focused?
-    4. likely_frozen_poultry (true/false): Does it likely stock frozen poultry (duck/chicken)?
-    5. priority_score (1-10): Overall fit score (10 = perfect fit, 1 = unlikely fit)
-    6. contact_recommendation (text): Brief recommendation on contacting this company
+    2. restaurant_type (string): One of: "Chinese", "Vietnamese", "Turkish", "Other", "Not a Restaurant"
+    3. business_model (string): One of: "bistro", "quick-service", "gastronomy", "fine-dining", "cafe", "other", "unknown"
+    4. is_target_customer (true/false): Is this a good prospect for hand towels and paper boxes?
+    5. product_fit_score (1-10): Likelihood to buy supplies (10 = very high need for takeaway packaging, 1 = unlikely)
+    6. reasoning (text): Brief explanation of classification (mention business type, likely volume, takeaway focus)
+    7. contact_recommendation (text): Recommendation on contacting this restaurant
+
+    Classification Guidelines:
+    - Bistros and quick-service restaurants: Higher priority (more takeaway orders = more packaging needs)
+    - Fine-dining: Lower priority (less takeaway, premium packaging preferences)
+    - Cafes/Bakeries: Medium priority if they serve food
+    - Look for keywords: bistro, imbiss, schnellimbiss, döner, pho, dim sum, takeaway, delivery
+    - Rate higher if they have good reviews (active business = more orders)
 
     Return ONLY a valid JSON ARRAY containing objects for all records. No markdown formatting.
     Example:
     [
-    {"record_index": 1, "is_horeca_distributor": true, ...},
-    {"record_index": 2, "is_horeca_distributor": false, ...}
+    {"record_index": 1, "restaurant_type": "Vietnamese", "business_model": "bistro", "is_target_customer": true, "product_fit_score": 8, "reasoning": "Vietnamese bistro with takeaway focus", "contact_recommendation": "High priority - call directly"},
+    {"record_index": 2, "restaurant_type": "Other", "business_model": "unknown", "is_target_customer": false, "product_fit_score": 2, "reasoning": "Not a target restaurant type", "contact_recommendation": "Skip"}
     ]
     """
     return prompt
@@ -135,7 +156,7 @@ def main():
     """Run the complete pipeline"""
     import argparse
 
-    parser = argparse.ArgumentParser(description="HORECA Distributor Finder")
+    parser = argparse.ArgumentParser(description="Germany Restaurant Finder - B2B Supplies")
     parser.add_argument("output_dir", nargs="?", help="Optional output directory name")
     parser.add_argument("--resume", action="store_true", help="Skip scraping/deduping and resume from existing deduped file")
     parser.add_argument("--ai-classify", action="store_true", help="Enable AI classification (disabled by default)")
@@ -149,8 +170,8 @@ def main():
         Config.ENABLE_AI_CLASSIFICATION = True
 
     print("\n" + "🚀 "*35)
-    print("HORECA FROZEN POULTRY DISTRIBUTOR FINDER")
-    print("End-to-End Pipeline")
+    print("GERMANY RESTAURANT FINDER - B2B SUPPLIES")
+    print("Find Chinese, Vietnamese & Turkish Restaurants")
     print("🚀 "*35)
 
     # Check for API key
@@ -184,6 +205,10 @@ def main():
             print(f"\n🌍 {country}")
 
             all_locations = (
+                tiers.get("tier_1_mega", []) +
+                tiers.get("tier_2_large", []) +
+                tiers.get("tier_3_regional", []) +
+                tiers.get("tier_4_gaps", []) +
                 tiers.get("tier_1", []) +
                 tiers.get("tier_2", []) +
                 tiers.get("tier_3", [])
@@ -224,20 +249,21 @@ def main():
         classifier = AIClassifier(Config.OPENAI_API_KEY)
         classified_leads = classifier.classify_all(
             records=deduped_leads,
-            prompt_generator=generate_horeca_prompt,
+            prompt_generator=generate_restaurant_classification_prompt,
             output_file=Config.CLASSIFIED_LEADS_FILE,
             batch_size=Config.BATCH_SIZE,
             resume=True
         )
         
-        # Filter to high-priority leads
+        # Filter to target restaurants with good product fit
         final_leads = [
             r for r in classified_leads
-            if r.get("priority_score") and float(r.get("priority_score", 0)) >= 7
+            if (r.get("is_target_customer") == True or r.get("is_target_customer") == "true")
+            and r.get("product_fit_score") and float(r.get("product_fit_score", 0)) >= 5
         ]
         final_leads = sorted(
             final_leads,
-            key=lambda x: float(x.get("priority_score", 0)),
+            key=lambda x: float(x.get("product_fit_score", 0)),
             reverse=True
         )
     else:

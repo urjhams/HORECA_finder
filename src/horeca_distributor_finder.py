@@ -41,14 +41,17 @@ class Config:
 
     # API Keys
     GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "YOUR_API_KEY_HERE")
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")  # Optional: for LLM classification
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")  # For AI classification (Gemini)
+    # Legacy support for OpenAI key name
+    if not GEMINI_API_KEY:
+        GEMINI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
     # File paths
     BASE_DIR = "."
-    RAW_LEADS_FILE = "1_raw_leads.csv"
-    DEDUPED_LEADS_FILE = "2_deduped_leads.csv"
-    CLASSIFIED_LEADS_FILE = "3_classified_leads.csv"
-    FINAL_PROSPECTS_FILE = "FINAL_HORECA_PROSPECTS.csv"
+    RAW_LEADS_FILE = "1_raw_restaurants.csv"
+    DEDUPED_LEADS_FILE = "2_deduped_restaurants.csv"
+    CLASSIFIED_LEADS_FILE = "3_classified_restaurants.csv"
+    FINAL_PROSPECTS_FILE = "FINAL_RESTAURANT_PROSPECTS.csv"
 
     @classmethod
     def set_output_dir(cls, output_dir: str = None):
@@ -61,10 +64,10 @@ class Config:
         else:
             cls.BASE_DIR = "."
             
-        cls.RAW_LEADS_FILE = os.path.join(cls.BASE_DIR, "1_raw_leads.csv")
-        cls.DEDUPED_LEADS_FILE = os.path.join(cls.BASE_DIR, "2_deduped_leads.csv")
-        cls.CLASSIFIED_LEADS_FILE = os.path.join(cls.BASE_DIR, "3_classified_leads.csv")
-        cls.FINAL_PROSPECTS_FILE = os.path.join(cls.BASE_DIR, "FINAL_HORECA_PROSPECTS.csv")
+        cls.RAW_LEADS_FILE = os.path.join(cls.BASE_DIR, "1_raw_restaurants.csv")
+        cls.DEDUPED_LEADS_FILE = os.path.join(cls.BASE_DIR, "2_deduped_restaurants.csv")
+        cls.CLASSIFIED_LEADS_FILE = os.path.join(cls.BASE_DIR, "3_classified_restaurants.csv")
+        cls.FINAL_PROSPECTS_FILE = os.path.join(cls.BASE_DIR, "FINAL_RESTAURANT_PROSPECTS.csv")
 
     # Deduplication thresholds
     FUZZY_MATCH_THRESHOLD = 85  # 0-100 for company name similarity
@@ -74,7 +77,7 @@ class Config:
 
     # Classification
     ENABLE_AI_CLASSIFICATION = False  # Default to False, enable via flag
-    BATCH_SIZE = 10  # Number of records to classify in one API call
+    BATCH_SIZE = 15  # Number of records to classify in one API call (increased for restaurants)
 
 
 # ============================================================================
@@ -258,7 +261,7 @@ def main():
 
     # ========== PHASE 3: AI CLASSIFICATION (OPTIONAL) ==========
     if Config.ENABLE_AI_CLASSIFICATION:
-        classifier = AIClassifier(Config.OPENAI_API_KEY)
+        classifier = AIClassifier(Config.GEMINI_API_KEY)
         classified_leads = classifier.classify_all(
             records=deduped_leads,
             prompt_generator=generate_restaurant_classification_prompt,

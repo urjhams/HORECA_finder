@@ -1,20 +1,22 @@
-# HORECA Frozen Poultry Distributor Finder
+# Germany Restaurant Finder - B2B Supplies
 
-**End-to-end automated pipeline to find frozen duck/chicken distributors supplying Asian restaurants across Germany, Spain, and France.**
+**End-to-end automated pipeline to find Chinese, Vietnamese, and Turkish restaurants across Germany for selling hand towels and paper boxes.**
 
 ## What This Does
 
 This Python script:
 
-1. **Scrapes** ~2,200–3,200 HORECA distributors using Google Maps Text Search API across 28 cities
-2. **Deduplicates** records using fuzzy matching (removes branch duplicates, normalizes data)
-3. **Classifies** leads via LLM (optional, identifies Vietnamese/Chinese focus + HORECA fit)
-4. **Exports** a clean CSV with company name, address, phone, email, priority score
+1. **Scrapes** restaurants across 32 German cities using Google Maps Text Search API
+2. **Deduplicates** records using fuzzy matching (handles restaurant chains correctly)
+3. **Classifies** restaurants via AI (Gemini) into Chinese, Vietnamese, Turkish categories
+4. **Exports** separate CSV files by restaurant type with contact details and fit scores
 
-**Input:** 28 city locations + 4 search queries per country  
-**Output:** 500–1,000+ qualified HORECA prospects with contact details  
-**Cost:** ~$2–7 for scraping + ~$20–30 for classification (optional)  
-**Time:** ~2–3 minutes API runtime + ~1 hour for review  
+**Target:** Small-medium restaurants, bistros, quick-service establishments  
+**Products:** Hand towels (paper towels) and paper boxes (takeaway packaging)  
+**Input:** 32 German cities (4 coverage tiers) + 4 restaurant search queries  
+**Output:** Categorized restaurant lists ready for B2B outreach  
+**Cost:** ~$5–10 for scraping + ~$2–5 for AI classification (with Gemini)  
+**Time:** ~5–10 minutes API runtime + classification time  
 
 ---
 
@@ -24,18 +26,13 @@ This Python script:
 
 - Python 3.8+
 - Google Cloud account with billing enabled
-- (Optional) OpenAI API key for AI classification
+- (Optional) Google Gemini API key for AI classification
 
-### 2. Clone/Download Files
+### 2. Clone Repository
 
-Create a directory and place these files in it:
-
-```
-horeca_finder/
-├── horeca_distributor_finder.py    (main script)
-├── requirements.txt                 (Python dependencies)
-├── .env.template                    (environment template)
-└── README.md                        (this file)
+```bash
+git clone <repository-url>
+cd HORECA_finder
 ```
 
 ### 3. Install Python Dependencies
@@ -44,10 +41,13 @@ horeca_finder/
 pip install -r requirements.txt
 ```
 
-If you want a specific Python version:
+Or with virtual environment:
 
 ```bash
-python3.10 -m pip install -r requirements.txt
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
 ```
 
 ### 4. Get Google Maps API Key
@@ -57,8 +57,7 @@ python3.10 -m pip install -r requirements.txt
 - Create a new project (or use existing)
 
 **b) Enable APIs:**
-- Search for "Places API" → Enable it
-- Search for "Maps JavaScript API" → Enable it
+- Search for "Places API (New)" → Enable it
 
 **c) Create API key:**
 - Go to "Credentials" → "Create Credentials" → "API Key"
@@ -66,15 +65,20 @@ python3.10 -m pip install -r requirements.txt
 
 **d) Set up billing:**
 - Go to "Billing" and link a payment method
-- Google gives ~$200 free credits/month; this script costs ~$2–7
+- Google gives ~$200 free credits/month; this script costs ~$5–10
 
-### 5. Configure Environment Variables
+### 5. (Optional) Get Google Gemini API Key
 
-**Option A: Using .env file (Recommended)**
+**For AI classification only:**
+- Go to https://aistudio.google.com/app/apikey
+- Click "Create API Key"
+- Copy your API key
+
+### 6. Configure Environment Variables
 
 ```bash
 # Copy template
-cp .env.template .env
+cp env.template .env
 
 # Edit .env with your actual keys
 nano .env  # or use your editor
@@ -83,56 +87,39 @@ nano .env  # or use your editor
 Fill in:
 ```
 GOOGLE_MAPS_API_KEY=AIza...your...key...here
+GEMINI_API_KEY=your_gemini_api_key_here  # Optional - for AI classification
 ```
 
-(Leave OPENAI_API_KEY blank for now; we'll skip AI classification initially)
+### 7. Run the Script
 
-**Option B: Set as environment variables directly**
-
+**Basic Usage (Scraping Only):**
 ```bash
-export GOOGLE_MAPS_API_KEY="AIza...your...key...here"
-python horeca_distributor_finder.py
+python src/horeca_distributor_finder.py
 ```
 
-### 6. Run the Script
-
-**Basic Usage:**
+**With AI Classification:**
 ```bash
-.venv/bin/python src/horeca_distributor_finder.py
+python src/horeca_distributor_finder.py --ai-classify
 ```
 
-**Advanced Usage:**
+**Advanced Options:**
 
-1.  **Specify Output Directory:**
-    Save all results into a specific folder (e.g., `my_project/base/`):
-    ```bash
-    .venv/bin/python src/horeca_distributor_finder.py my_project
-    ```
+1. **Specify Output Directory:**
+   ```bash
+   python src/horeca_distributor_finder.py my_project
+   ```
 
-2.  **Resume from Previous Run:**
-    Skip scraping and deduplication (uses existing `2_deduped_leads.csv`):
-    ```bash
-    .venv/bin/python src/horeca_distributor_finder.py --resume
-    ```
-
-3.  **Enable AI Classification:**
-    By default, AI classification is OFF. To enable it (requires OpenAI key):
-    ```bash
-    .venv/bin/python src/horeca_distributor_finder.py --ai-classify
-    ```
-
-4.  **Resume + AI Classification (Recommended for retrying AI):**
-    This skips scraping and resumes AI classification where it left off (saves progress every 10 records):
-    ```bash
-    .venv/bin/python src/horeca_distributor_finder.py --resume --ai-classify
-    ```
+2. **Resume from Previous Run:**
+   ```bash
+   python src/horeca_distributor_finder.py --resume --ai-classify
+   ```
 
 Expected output:
 
 ```
 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 
-HORECA FROZEN POULTRY DISTRIBUTOR FINDER
-End-to-End Pipeline
+GERMANY RESTAURANT FINDER - B2B SUPPLIES
+Find Chinese, Vietnamese & Turkish Restaurants
 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 🚀 
 
 ======================================================================
@@ -140,12 +127,12 @@ PHASE 1: GOOGLE MAPS SCRAPING
 ======================================================================
 
 🌍 Germany
-  📍 Berlin (30km radius)
-    🔍 Vietnamesische Lebensmittel Großhandel... (18 found)
-    🔍 Chinesischer Lebensmittel Großhandel... (12 found)
-    🔍 Asiatischer Tiefkühlkost Großhandel HORECA... (8 found)
-    🔍 Frozen duck importer HORECA... (5 found)
-  📍 Hamburg (30km radius)
+  📍 Berlin-Center (10km radius)
+    🔍 Restaurant... (156 found)
+    🔍 Asiatisches Restaurant... (89 found)
+    🔍 Vietnamesisches Restaurant... (45 found)
+    🔍 Chinesisches Restaurant... (67 found)
+  📍 Hamburg-Center (10km radius)
     ...
 ```
 
@@ -162,23 +149,49 @@ When complete, it will save 4 CSV files:
 
 Main file with columns:
 
+When complete, it will save CSV files:
+- `1_raw_restaurants.csv` - Raw results from Google Maps
+- `2_deduped_restaurants.csv` - After deduplication
+- `FINAL_RESTAURANT_PROSPECTS.csv` - **MAIN FILE** (all target restaurants)
+
+With AI classification enabled:
+- `3_classified_restaurants.csv` - With AI analysis
+- `FINAL_CHINESE_RESTAURANTS.csv` - Chinese restaurants only
+- `FINAL_VIETNAMESE_RESTAURANTS.csv` - Vietnamese restaurants only
+- `FINAL_TURKISH_RESTAURANTS.csv` - Turkish restaurants only
+
+---
+
+## Output Files
+
+### Main Output Files (with AI Classification)
+
+**FINAL_CHINESE_RESTAURANTS.csv** - Chinese restaurants
+**FINAL_VIETNAMESE_RESTAURANTS.csv** - Vietnamese restaurants  
+**FINAL_TURKISH_RESTAURANTS.csv** - Turkish restaurants  
+**FINAL_RESTAURANT_PROSPECTS.csv** - All target restaurants combined
+
+Columns:
 ```
 id, company_name, street_address, city, postal_code, full_address,
 latitude, longitude, phone, website, rating, review_count, types,
-source, search_query, scrape_timestamp
+restaurant_type, business_model, is_target_customer, product_fit_score,
+reasoning, contact_recommendation, source, search_query, scrape_timestamp
 ```
 
 **Example:**
-```
-id,company_name,street_address,city,postal_code,full_address,latitude,longitude,phone,website,rating,review_count,types,source,search_query,scrape_timestamp
-ChIJxxx,Euro Asia Union,Steintorplatz 5,Hamburg,20095,"Steintorplatz 5, 20095 Hamburg, Germany",53.55,10.00,+49 40 1234567,https://euroasia.de,4.5,120,"restaurant,food,wholesale",google_maps_textsearch,"Vietnamese food wholesale",2025-12-02T10:30:00
+```csv
+id,company_name,city,phone,website,rating,restaurant_type,business_model,product_fit_score,reasoning,contact_recommendation
+ChIJxxx,Pho Vietnam Bistro,Berlin,+49 30 1234567,https://pho-vietnam.de,4.5,Vietnamese,bistro,9,"Vietnamese bistro likely has high takeaway volume",High priority
+ChIJyyy,Döner Kebab Express,Hamburg,+49 40 9876543,https://doener-express.de,4.2,Turkish,quick-service,8,"Turkish quick-service high packaging needs",High priority
 ```
 
-**Use this CSV to:**
-- Contact companies directly (phone + website)
-- Filter by region/city
-- Verify ratings/reviews
-- Look up website for more info
+**Use these CSVs to:**
+- Contact restaurants directly (phone)
+- Visit restaurant websites for more info
+- Target by cuisine type for customized pitches
+- Sort by product_fit_score for priority outreach
+- Import to CRM for sales campaigns
 
 ---
 
@@ -188,37 +201,51 @@ ChIJxxx,Euro Asia Union,Steintorplatz 5,Hamburg,20095,"Steintorplatz 5, 20095 Ha
 
 ```bash
 # On Mac
-open FINAL_HORECA_PROSPECTS.csv
+open FINAL_CHINESE_RESTAURANTS.csv
 
-# On Windows
-start FINAL_HORECA_PROSPECTS.csv
+# On Windows  
+start FINAL_VIETNAMESE_RESTAURANTS.csv
 
 # Or upload to Google Sheets
 ```
 
 ### 2. Filter & Sort
 
-- **Sort by rating** (high rating = more credible)
-- **Filter by city** (focus on major hubs first)
-- **Filter by website** (companies with websites = more established)
+- **Sort by product_fit_score** (highest = best prospects)
+- **Filter by city** (focus on your target region)
+- **Filter by business_model** (bistro/quick-service = high takeaway volume)
+- **Check contact_recommendation** (High/Medium/Low priority)
 
-### 3. Outreach
+### 3. Outreach Strategy
 
-For each company:
+**For Chinese Restaurants:**
+- Products: Packaging for dim sum, spring rolls, fried rice takeaway
+- Pitch: "We supply high-quality paper boxes perfect for Chinese takeaway"
 
-1. **Phone call** (direct, personal)
-   - "Hi, we're importing crispy duck/chicken frozen products. Are you interested in samples?"
-   - Ask for procurement manager
+**For Vietnamese Restaurants:**
+- Products: Pho containers, spring roll boxes, bánh mì packaging
+- Pitch: "Specialty packaging for Vietnamese cuisine takeaway orders"
 
-2. **Email** (formal, with details)
-   - Use company website contact form if available
-   - Reference you found them on Google Maps
-   - Attach product brochure (images, certifications, pricing)
+**For Turkish Restaurants:**
+- Products: Döner boxes, wrap containers, kebab packaging
+- Pitch: "Premium packaging solutions for döner and kebab businesses"
 
-3. **LinkedIn** (B2B networking)
-   - Search company name
-   - Connect with procurement manager
-   - Send product info
+**Contact Methods:**
+
+1. **Phone call** (most effective)
+   - "Hi, we supply hand towels and takeaway packaging for restaurants"
+   - Ask for owner or manager
+   - Offer free samples
+
+2. **Website contact form** (if available)
+   - Professional message with product catalog
+   - Mention you found them on Google Maps
+   - Include pricing and volume discounts
+
+3. **Visit in person** (local restaurants)
+   - Bring product samples
+   - Show catalog and pricing
+   - Build relationship
 
 ---
 
@@ -226,54 +253,63 @@ For each company:
 
 ### Add More Cities
 
-Edit `SEARCH_LOCATIONS` in the script:
+Edit `src/search_config_horeca.py`:
 
 ```python
-"Germany": {
-    "tier_1": [
-        {"name": "Your City", "lat": 52.00, "lng": 13.00, "radius": 30},
-    ]
-}
+"tier_1_mega": [
+    {"name": "Your City", "lat": 52.00, "lng": 13.00, "radius": 10},
+]
 ```
 
 Get coordinates from Google Maps (right-click → copy coordinates).
 
 ### Change Search Queries
 
-Edit `SEARCH_QUERIES`:
+Edit `SEARCH_QUERIES` in `src/search_config_horeca.py`:
 
 ```python
 "Germany": [
+    "Restaurant",
     "Your custom query",
-    "Another query",
 ]
 ```
 
-### Enable AI Classification
+### Adjust Classification Criteria
 
-To classify leads by priority (1–10 score):
+In `src/horeca_distributor_finder.py`, modify filtering:
 
-1. Get OpenAI API key: https://platform.openai.com/api-keys
-2. Add to `.env`:
-   ```
-   OPENAI_API_KEY=sk-your-key-here
-   ```
-3. In script, set:
-   ```python
-   ENABLE_AI_CLASSIFICATION = True
-   ```
-4. Run again
+```python
+# Change minimum product fit score
+product_fit_score >= 7  # Instead of 5 (more selective)
 
-**Cost:** ~$20–30 for 1,000 classifications
+# Remove phone requirement
+# and r.get("phone")  # Comment out this line
+```
 
-### AI Classification Optimization (Batch Processing)
+---
 
-The script uses **Batch Processing** (default `BATCH_SIZE = 10`) to optimize costs and speed.
+## AI Classification Details
 
--   **Why 10?** It's the "sweet spot" for efficiency.
-    -   **Cost Reduction:** Sending 10 records in one prompt reduces input token costs by ~80% compared to single-record processing (amortizing system instructions).
-    -   **Speed:** Reduces API requests by 10x, avoiding rate limits.
-    -   **Stability:** Going larger (e.g., 50) risks timeouts and JSON parsing errors.
+The script uses **Google Gemini** for classification with optimized batch processing.
+
+### Batch Size Optimization
+
+- **Batch Size: 40** (processes 40 restaurants per API call)
+- **Why 40?** Maximum efficiency with Gemini
+  - Reduces API calls by 97.5% (vs single-record processing)
+  - Lower cost per classification (~$0.001 per restaurant)
+  - Fast response time
+  - Reliable JSON parsing
+
+### Classification Fields
+
+For each restaurant, AI determines:
+- `restaurant_type`: Chinese, Vietnamese, Turkish, Other, Not a Restaurant
+- `business_model`: bistro, quick-service, gastronomy, fine-dining, cafe, other
+- `is_target_customer`: true/false (good fit for supplies?)
+- `product_fit_score`: 1-10 (likelihood to buy packaging)
+- `reasoning`: Brief explanation
+- `contact_recommendation`: High/Medium/Low priority
 
 ---
 
@@ -291,37 +327,36 @@ cat .env  # Check contents
 
 **Causes:**
 - API quotas reached (Google gives $200/month free; check billing)
-- API not enabled (go to Cloud Console → enable "Places API")
+- API not enabled (go to Cloud Console → enable "Places API (New)")
 - Search query too specific (try broader queries)
 
-### Error: "fuzzywuzzy import failed"
+### Error: "google-genai import failed"
 
 **Solution:** Install missing package
 
 ```bash
-pip install fuzzywuzzy python-Levenshtein
+pip install google-genai
 ```
 
 ### Script running too slow?
 
-- Reduce `MAX_PAGES_PER_QUERY` from 3 to 2 (limits results to 40 per search)
-- Remove some cities from `SEARCH_LOCATIONS`
+- Reduce search locations in `src/search_config_horeca.py`
+- Skip AI classification (run without `--ai-classify`)
 - Run during off-peak hours (less API latency)
 
 ---
 
 ## Cost Breakdown
 
-| Component | Cost |
-|-----------|------|
-| Google Maps Text Search API | $0.0145 per query |
-| Example: 112 queries × 2 pages | ~$3–5 |
-| OpenAI classification (optional) | $0.001–0.003 per classification |
-| Example: 1,000 classifications | ~$20–30 |
-| **Total (with classification)** | ~$25–35 |
-| **Total (without classification)** | ~$3–5 |
+| Component | Cost per Unit | Example Usage | Total |
+|-----------|---------------|---------------|-------|
+| Google Maps Text Search API | $0.032 per search | 128 searches (32 cities × 4 queries) | ~$4 |
+| Google Maps Text Search API | $0.017 per result | ~1,000 results | ~$17 |
+| Google Gemini Classification | ~$0.001 per restaurant | 1,000 restaurants (40 per batch) | ~$1-2 |
+| **Total (with classification)** | | | **~$22-23** |
+| **Total (without classification)** | | | **~$21** |
 
-Google provides $200 free monthly credits for new accounts.
+**Note:** Google provides $200 free monthly credits for new accounts.
 
 ---
 
@@ -333,64 +368,78 @@ Google provides $200 free monthly credits for new accounts.
 - No cookies or tracking
 - Data stored locally, not shared
 
-**Note:** When you contact companies, **you must comply with GDPR:**
-- Don't spam (B2B outreach is OK if business-related)
-- Include unsubscribe option in emails
+**Note:** When you contact restaurants, **you must comply with GDPR:**
+- B2B outreach is OK if business-related
+- Keep communications professional
+- Respect opt-out requests
 - Don't sell contact list to third parties
 
 ---
 
 ## Next Steps
 
-1. **Run the script** → generates CSV
-2. **Review top 20–30** entries manually
-3. **Reach out to top prospects** with product samples
-4. **Refine search queries** based on results
-5. **Iterate** (run again with adjusted queries after 2–4 weeks)
+1. **Run the script** → generates categorized CSV files
+2. **Review top prospects** by product_fit_score
+3. **Reach out by restaurant type** with targeted pitches
+4. **Track responses** and conversion rates
+5. **Iterate** based on results (adjust cities/queries)
 
 ---
 
-## Support & Debugging
+## Project Structure
 
-If script fails:
+```
+HORECA_finder/
+├── src/
+│   ├── horeca_distributor_finder.py  - Main script
+│   ├── google_maps_scraper.py        - Google Maps API integration
+│   ├── ai_classifier.py              - Gemini AI classification
+│   ├── utils.py                      - Deduplication & reporting
+│   ├── search_config_horeca.py       - Location & query config
+│   └── search_config_nrw_warehouse.py - (legacy)
+├── requirements.txt                   - Python dependencies
+├── env.template                       - Environment template
+├── README.md                          - This file
+└── .env                              - Your API keys (create from template)
 
-1. **Check API key:**
-   ```bash
-   grep GOOGLE_MAPS_API_KEY .env
-   ```
-
-2. **Check Google Cloud:**
-   - Go to console.cloud.google.com
-   - Check billing is enabled
-   - Check API quotas (Quotas → Places API)
-
-3. **Check network:**
-   ```bash
-   ping maps.googleapis.com
-   ```
-
-4. **Run in verbose mode** (add print statements to debug)
+Output files (after running):
+├── 1_raw_restaurants.csv             - Raw Google Maps data
+├── 2_deduped_restaurants.csv         - After deduplication
+├── 3_classified_restaurants.csv      - After AI classification
+├── FINAL_CHINESE_RESTAURANTS.csv     - Chinese restaurants only
+├── FINAL_VIETNAMESE_RESTAURANTS.csv  - Vietnamese restaurants only
+├── FINAL_TURKISH_RESTAURANTS.csv     - Turkish restaurants only
+└── FINAL_RESTAURANT_PROSPECTS.csv    - All target restaurants
+```
 
 ---
 
-## Files Overview
+## Pipeline Overview
 
-```
-horeca_distributor_finder.py
-├── Config class           - Settings & API keys
-├── search_config.py       - Search locations & queries (NEW)
-├── GoogleMapsScraper      - Phase 1: Scraping
-├── Deduplicator           - Phase 2: Deduplication
-├── AIClassifier           - Phase 3: AI classification
-├── FileManager            - CSV I/O
-└── main()                 - Orchestration
+**Phase 1: Scraping**
+- Google Maps Text Search API
+- 32 German cities (4 tiers: mega/large/regional/gaps)
+- 4 search queries: Restaurant, Asian, Vietnamese, Chinese
+- ~1,000-3,000 raw results
 
-Output files:
-├── 1_raw_leads.csv                    (raw API results)
-├── 2_deduped_leads.csv                (deduplicated)
-├── FINAL_HORECA_PROSPECTS.csv         (ready for outreach) ← USE THIS
-└── (3_classified_leads.csv)           (if AI enabled)
-```
+**Phase 2: Deduplication**
+- Fuzzy name matching (85% threshold)
+- Phone/website matching
+- Handles restaurant chains (same name, different cities)
+- ~800-2,000 unique restaurants
+
+**Phase 3: AI Classification (Optional)**
+- Google Gemini 2.5 Flash Lite
+- Batch size: 40 restaurants per call
+- Classifies: Chinese/Vietnamese/Turkish/Other
+- Scores: product_fit_score (1-10)
+- ~500-1,000 target restaurants
+
+**Phase 4: Export by Type**
+- Filters: score ≥5, has phone, is_target_customer
+- Separate CSV files per restaurant type
+- Sorted by product_fit_score
+- Ready for B2B outreach
 
 ---
 
@@ -402,12 +451,13 @@ This script is for internal business use. Do not resell the data or use for spam
 
 ## Contact & Questions
 
-For issues or questions about the script, check:
+For issues or questions:
 - Google Maps API docs: https://developers.google.com/maps/documentation/places
-- OpenAI docs: https://platform.openai.com/docs
+- Google Gemini docs: https://ai.google.dev/docs
 - FuzzyWuzzy docs: https://github.com/seatgeek/fuzzywuzzy
 
 ---
 
-**Last updated:** December 2, 2025
+**Last updated:** March 3, 2026  
 **Status:** Production-ready ✅
+

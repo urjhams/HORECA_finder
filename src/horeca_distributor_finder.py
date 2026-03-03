@@ -72,9 +72,6 @@ class Config:
     # Deduplication thresholds
     FUZZY_MATCH_THRESHOLD = 85  # 0-100 for company name similarity
 
-    # Email extraction
-    ENABLE_EMAIL_EXTRACTION = True  # Enable website email scraping
-
     # Classification
     ENABLE_AI_CLASSIFICATION = False  # Default to False, enable via flag
     BATCH_SIZE = 40  # Number of records to classify in one API call (optimized for restaurants)
@@ -189,10 +186,7 @@ def main():
         
     else:
         # ========== PHASE 1: SCRAPING ==========
-        scraper = GoogleMapsScraper(
-            Config.GOOGLE_MAPS_API_KEY,
-            enable_email_extraction=Config.ENABLE_EMAIL_EXTRACTION
-        )
+        scraper = GoogleMapsScraper(Config.GOOGLE_MAPS_API_KEY)
         
         print("\n" + "="*70)
         print("PHASE 1: GOOGLE MAPS SCRAPING")
@@ -226,17 +220,11 @@ def main():
                         radius=location["radius"]
                     )
 
-                    # Extract emails from websites if enabled
-                    if Config.ENABLE_EMAIL_EXTRACTION and results:
-                        results = scraper.enrich_with_emails(results)
-
                     raw_leads.extend(results)
                     print(f"({len(results)} found)")
 
         print(f"\n✅ Total API calls: {scraper.call_count}")
         print(f"✅ Total results: {scraper.total_results}")
-        if Config.ENABLE_EMAIL_EXTRACTION:
-            print(f"✅ Emails extracted: {scraper.email_extraction_count}")
 
         # Save raw leads
         FileManager.save_csv(raw_leads, Config.RAW_LEADS_FILE)

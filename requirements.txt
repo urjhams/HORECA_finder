@@ -1,10 +1,7 @@
-# HORECA Distributor Finder - Python Dependencies
+# Germany Restaurant Finder - Python Dependencies
 
 # HTTP requests
 requests>=2.31.0
-
-# HTML parsing for email extraction
-beautifulsoup4>=4.12.0
 
 # Fuzzy string matching for deduplication
 fuzzywuzzy>=0.18.0
@@ -13,8 +10,8 @@ python-Levenshtein>=0.21.1
 # Environment variable management
 python-dotenv>=1.0.0
 
-# OpenAI API (optional - only if using AI classification)
-openai>=1.0.0
+# Google GenAI (for AI classification with Gemini)
+google-genai>=1.0.0
 
 # Data processing
 pandas>=2.0.0  # Optional but helpful for data analysis

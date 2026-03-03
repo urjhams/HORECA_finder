@@ -54,7 +54,7 @@ class Config:
     FINAL_PROSPECTS_FILE = "FINAL_RESTAURANT_PROSPECTS.csv"
 
     @classmethod
-    def set_output_dir(cls, output_dir: str = None):
+    def set_output_dir(cls, output_dir: str | None = None):
         """Set output directory for files"""
         if output_dir:
             # Create base directory: {output_dir}/base
@@ -77,7 +77,7 @@ class Config:
 
     # Classification
     ENABLE_AI_CLASSIFICATION = False  # Default to False, enable via flag
-    BATCH_SIZE = 15  # Number of records to classify in one API call (increased for restaurants)
+    BATCH_SIZE = 40  # Number of records to classify in one API call (optimized for restaurants)
 
 
 # ============================================================================
@@ -108,49 +108,37 @@ Target Customers:
 - Vietnamese restaurants (bistros, quick-service, gastronomy)  
 - Turkish restaurants (döner shops, bistros, quick-service, gastronomy)
 
-Focus on small-to-medium restaurants, bistros, and quick-service establishments that need:
-- Hand towels (paper towels for customers/kitchen)
-- Paper boxes (takeaway packaging, food containers)
+Focus on small-to-medium restaurants, bistros, and quick-service establishments that need hand towels and paper boxes for takeaway/delivery.
 
 Records to analyze:
 """
     for i, record in enumerate(records):
         prompt += f"""
-        --- Record {i+1} ---
-        ID: {record.get('id', 'N/A')}
-        Company Name: {record.get('company_name', 'Unknown')}
-        Address: {record.get('full_address', 'Unknown')}
-        Website: {record.get('website', 'N/A')}
-        Phone: {record.get('phone', 'N/A')}
-        Business Types: {record.get('types', 'N/A')}
-        Rating: {record.get('rating', 'N/A')}
-        Reviews: {record.get('review_count', 'N/A')}
-        """
+{i+1}. {record.get('company_name', 'Unknown')} | {record.get('city', '')} | Types: {record.get('types', 'N/A')}"""
 
     prompt += """
-    For EACH record, return a JSON object with these fields:
-    1. record_index (int): The record number (1, 2, 3...) matching the input.
-    2. restaurant_type (string): One of: "Chinese", "Vietnamese", "Turkish", "Other", "Not a Restaurant"
-    3. business_model (string): One of: "bistro", "quick-service", "gastronomy", "fine-dining", "cafe", "other", "unknown"
-    4. is_target_customer (true/false): Is this a good prospect for hand towels and paper boxes?
-    5. product_fit_score (1-10): Likelihood to buy supplies (10 = very high need for takeaway packaging, 1 = unlikely)
-    6. reasoning (text): Brief explanation of classification (mention business type, likely volume, takeaway focus)
-    7. contact_recommendation (text): Recommendation on contacting this restaurant
 
-    Classification Guidelines:
-    - Bistros and quick-service restaurants: Higher priority (more takeaway orders = more packaging needs)
-    - Fine-dining: Lower priority (less takeaway, premium packaging preferences)
-    - Cafes/Bakeries: Medium priority if they serve food
-    - Look for keywords: bistro, imbiss, schnellimbiss, döner, pho, dim sum, takeaway, delivery
-    - Rate higher if they have good reviews (active business = more orders)
+For EACH record, return a JSON object with these fields:
+1. record_index (int): The record number (1, 2, 3...)
+2. restaurant_type (string): "Chinese", "Vietnamese", "Turkish", "Other", or "Not a Restaurant"
+3. business_model (string): "bistro", "quick-service", "gastronomy", "fine-dining", "cafe", "other", or "unknown"
+4. is_target_customer (true/false): Good prospect for hand towels and paper boxes?
+5. product_fit_score (1-10): Likelihood to buy supplies (10 = high takeaway volume, 1 = unlikely)
+6. reasoning (text): Brief explanation (1 sentence)
+7. contact_recommendation (text): "High priority", "Medium priority", "Low priority", or "Skip"
 
-    Return ONLY a valid JSON ARRAY containing objects for all records. No markdown formatting.
-    Example:
-    [
-    {"record_index": 1, "restaurant_type": "Vietnamese", "business_model": "bistro", "is_target_customer": true, "product_fit_score": 8, "reasoning": "Vietnamese bistro with takeaway focus", "contact_recommendation": "High priority - call directly"},
-    {"record_index": 2, "restaurant_type": "Other", "business_model": "unknown", "is_target_customer": false, "product_fit_score": 2, "reasoning": "Not a target restaurant type", "contact_recommendation": "Skip"}
-    ]
-    """
+Classification Guidelines:
+- Bistros/quick-service/döner: High priority (more takeaway = more packaging)
+- Fine-dining: Low priority (less takeaway)
+- Look for keywords: bistro, imbiss, schnellimbiss, döner, pho, dim sum, asia, china, vietnam, türk
+
+Return ONLY a valid JSON ARRAY. No markdown.
+Example:
+[
+{"record_index": 1, "restaurant_type": "Vietnamese", "business_model": "bistro", "is_target_customer": true, "product_fit_score": 8, "reasoning": "Vietnamese bistro likely has high takeaway volume", "contact_recommendation": "High priority"},
+{"record_index": 2, "restaurant_type": "Other", "business_model": "unknown", "is_target_customer": false, "product_fit_score": 2, "reasoning": "Not a target restaurant type", "contact_recommendation": "Skip"}
+]
+"""
     return prompt
 
 

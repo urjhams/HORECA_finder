@@ -1,5 +1,5 @@
 """
-Utility classes for HORECA Finder
+Utility classes for Restaurant Finder
 """
 
 import csv
@@ -7,7 +7,7 @@ from typing import List, Dict
 from fuzzywuzzy import fuzz
 
 class Deduplicator:
-    """Remove duplicates and normalize data"""
+    """Remove duplicates and normalize restaurant data"""
 
     @staticmethod
     def normalize_company_name(name: str) -> str:
@@ -15,7 +15,9 @@ class Deduplicator:
         import re
         name = name.lower().strip()
         name = re.sub(r"\s+", " ", name)  # Remove extra spaces
+        # Remove common legal entities and restaurant keywords
         name = re.sub(r"(gmbh|ltd|inc|ag|sa|srl|sas|s\.a\.r\.l|eurl)$", "", name)
+        name = re.sub(r"(restaurant|bistro|imbiss|café|cafe)$", "", name)
         name = re.sub(r"\s+", " ", name).strip()
         return name
 
@@ -28,7 +30,7 @@ class Deduplicator:
 
     @staticmethod
     def fuzzy_match_names(name1: str, name2: str, threshold: int = 85) -> bool:
-        """Check if two names are likely the same company"""
+        """Check if two names are likely the same restaurant"""
         norm1 = Deduplicator.normalize_company_name(name1)
         norm2 = Deduplicator.normalize_company_name(name2)
 
@@ -44,9 +46,13 @@ class Deduplicator:
             if record1["id"] == record2["id"]:
                 return True
 
-        # Same website → likely duplicate
+        # Same website → likely duplicate (unless it's a chain website)
         if record1.get("website") and record2.get("website"):
             if record1["website"] == record2["website"]:
+                # Check if different cities - could be chain with same website
+                if record1.get("city") and record2.get("city"):
+                    if record1["city"].lower() != record2["city"].lower():
+                        return False  # Different cities, probably chain branches
                 return True
 
         # Same phone → likely duplicate
@@ -56,7 +62,7 @@ class Deduplicator:
             if phone1 and phone2 and phone1 == phone2:
                 return True
 
-        # Fuzzy match on name + same city
+        # Fuzzy match on name + same city (restaurants with same name in different cities are different)
         if record1.get("city") and record2.get("city"):
             if record1["city"].lower() == record2["city"].lower():
                 if Deduplicator.fuzzy_match_names(
@@ -70,7 +76,7 @@ class Deduplicator:
 
     @staticmethod
     def deduplicate(records: List[Dict], threshold: int = 85) -> List[Dict]:
-        """Remove duplicates from records"""
+        """Remove duplicates from restaurant records"""
         unique_records = []
         seen_indices = set()
 
@@ -142,41 +148,59 @@ class FileManager:
 
     @staticmethod
     def generate_report(records: List[Dict]):
-        """Generate summary report"""
+        """Generate summary report for restaurants"""
 
         print("\n" + "="*70)
-        print("FINAL SUMMARY REPORT")
+        print("FINAL SUMMARY REPORT - RESTAURANT PROSPECTS")
         print("="*70)
 
-        print(f"\nTotal prospects: {len(records)}")
+        print(f"\n📊 Total restaurants: {len(records)}")
 
-        # Group by city/country logic can be handled generically or by caller, 
-        # but for now we'll keep the simple city/country extraction
-        by_location = {}
+        # Count by city
+        by_city = {}
         for r in records:
-            # Try to guess country from city string if it has it, else just city
-            loc = r.get("city", "Unknown")
-            if "," in loc:
-                loc = loc.split(",")[-1].strip()
-            
-            if loc not in by_location:
-                by_location[loc] = 0
-            by_location[loc] += 1
+            city = r.get("city", "Unknown")
+            if city not in by_city:
+                by_city[city] = 0
+            by_city[city] += 1
 
-        print("\nBy Location:")
-        for loc, count in sorted(by_location.items(), key=lambda x: x[1], reverse=True):
-            print(f"  {loc}: {count}")
+        print("\n🏙️  By City (Top 10):")
+        for city, count in sorted(by_city.items(), key=lambda x: x[1], reverse=True)[:10]:
+            print(f"  {city}: {count}")
 
-        # Top priority scores
-        if records and "priority_score" in records[0]:
+        # Count by restaurant type (if classified)
+        if records and "restaurant_type" in records[0]:
+            by_type = {}
+            for r in records:
+                rtype = r.get("restaurant_type", "Unknown")
+                if rtype not in by_type:
+                    by_type[rtype] = 0
+                by_type[rtype] += 1
+
+            print("\n🍜 By Restaurant Type:")
+            for rtype, count in sorted(by_type.items(), key=lambda x: x[1], reverse=True):
+                print(f"  {rtype}: {count}")
+
+        # Count with contact info
+        with_phone = sum(1 for r in records if r.get("phone"))
+        with_website = sum(1 for r in records if r.get("website"))
+
+        print("\n📞 Contact Information:")
+        print(f"  With phone: {with_phone} ({with_phone/len(records)*100:.1f}%)")
+        print(f"  With website: {with_website} ({with_website/len(records)*100:.1f}%)")
+
+        # Top product fit scores (if classified)
+        if records and "product_fit_score" in records[0]:
             top_scores = sorted(
-                [r for r in records if "priority_score" in r and r["priority_score"]],
-                key=lambda x: float(x["priority_score"]),
+                [r for r in records if r.get("product_fit_score")],
+                key=lambda x: float(x.get("product_fit_score", 0)),
                 reverse=True
-            )[:5]
+            )[:10]
 
             if top_scores:
-                print("\nTop 5 prospects:")
+                print("\n⭐ Top 10 Prospects (by product fit score):")
                 for i, r in enumerate(top_scores, 1):
-                    score = r.get("priority_score", "N/A")
-                    print(f"  {i}. {r['company_name']} ({r['city']}) - Score: {score}/10")
+                    score = r.get("product_fit_score", "N/A")
+                    rtype = r.get("restaurant_type", "Unknown")
+                    model = r.get("business_model", "unknown")
+                    print(f"  {i}. {r.get('company_name', 'Unknown')} ({r.get('city', 'Unknown')}) - {rtype} {model} - Score: {score}/10")

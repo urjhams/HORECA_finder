@@ -50,13 +50,25 @@ class GoogleMapsScraper:
             delay = self.rate_limit_delay + random.uniform(*self.jitter_range)
             time.sleep(delay)
 
-            # Build request payload
+            # Convert radius (km) to approximate lat/lng offset for bounding box
+            # 1 degree latitude ≈ 111 km, 1 degree longitude ≈ 111 km * cos(lat)
+            import math
+            lat_offset = radius / 111.0
+            lng_offset = radius / (111.0 * math.cos(math.radians(lat)))
+            
+            # Build request payload with rectangle (required for locationRestriction)
             payload = {
                 "textQuery": query,
-                "locationBias": {
-                    "circle": {
-                        "center": {"latitude": lat, "longitude": lng},
-                        "radius": radius * 1000.0  # Convert km to meters (ensure float)
+                "locationRestriction": {
+                    "rectangle": {
+                        "low": {
+                            "latitude": lat - lat_offset,
+                            "longitude": lng - lng_offset
+                        },
+                        "high": {
+                            "latitude": lat + lat_offset,
+                            "longitude": lng + lng_offset
+                        }
                     }
                 },
                 "maxResultCount": 20

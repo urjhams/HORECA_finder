@@ -6,42 +6,46 @@ import json
 import time
 import os
 from typing import List, Dict, Callable
+from google import genai
+from google.genai import types
+
 try:
     from src.utils import FileManager
 except ImportError:
     from utils import FileManager
 
+SYSTEM_INSTRUCTION = "You are a business analyst. Always return a valid JSON array."
+
 class AIClassifier:
-    """Classify leads using LLM (OpenAI or similar)"""
+    """Classify leads using LLM (Google Gemini)"""
 
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.call_count = 0
+        self.client = genai.Client(api_key=api_key)
+        self.model = 'gemini-2.5-flash-lite'
+        self.config = types.GenerateContentConfig(
+            system_instruction=SYSTEM_INSTRUCTION,
+            response_mime_type='application/json',
+        )
 
     def classify_batch(self, records: List[Dict], prompt_generator: Callable[[List[Dict]], str]) -> List[Dict]:
         """Classify a batch of records using LLM"""
         
         if not self.api_key:
-            print("⚠️  No OpenAI API key configured. Skipping batch.")
+            print("⚠️  No API key configured. Skipping batch.")
             return [{}] * len(records)
 
         try:
-            from openai import OpenAI
-            client = OpenAI(api_key=self.api_key)
-
             prompt = prompt_generator(records)
 
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a business analyst. Always return a valid JSON array."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.2,
-                max_tokens=1000
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=prompt,
+                config=self.config,
             )
 
-            result_text = response.choices[0].message.content.strip()
+            result_text = response.text.strip()
             # Clean up potential markdown code blocks
             if result_text.startswith("```json"):
                 result_text = result_text[7:]
@@ -59,7 +63,7 @@ class AIClassifier:
             return [{}] * len(records)
 
     def classify_all(self, records: List[Dict], prompt_generator: Callable[[List[Dict]], str], 
-                     output_file: str, batch_size: int = 10, resume: bool = True) -> List[Dict]:
+                    output_file: str, batch_size: int = 10, resume: bool = True) -> List[Dict]:
         """Classify all records with resume capability, incremental saving, and batch processing"""
 
         print("\n" + "="*70)

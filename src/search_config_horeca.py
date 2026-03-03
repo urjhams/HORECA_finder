@@ -5,82 +5,58 @@ This file contains the location data and search queries used by the main script.
 """
 
 # ============================================================================
-# LOCATION DATA: 28 cities across 3 countries with tiered radius
+# LOCATION DATA: Germany comprehensive coverage with tiered radius
 # ============================================================================
 
 SEARCH_LOCATIONS = {
     "Germany": {
-        "tier_1": [  # 30 km radius (mega cities)
-            {"name": "Berlin", "lat": 52.52, "lng": 13.40, "radius": 30},
-            {"name": "Hamburg", "lat": 53.55, "lng": 10.00, "radius": 30},
-            {"name": "Munich", "lat": 48.14, "lng": 11.58, "radius": 30},
-            {"name": "Cologne", "lat": 50.94, "lng": 6.96, "radius": 30},
+        "tier_1_mega": [  # 5-10 km radius (High density - multiple calls per city needed for full coverage)
+            {"name": "Berlin-Center", "lat": 52.52, "lng": 13.40, "radius": 10},
+            {"name": "Hamburg-Center", "lat": 53.55, "lng": 10.00, "radius": 10},
+            {"name": "Munich-Center", "lat": 48.14, "lng": 11.58, "radius": 10},
+            {"name": "Cologne-Center", "lat": 50.94, "lng": 6.96, "radius": 10},
+            {"name": "Frankfurt-Center", "lat": 50.11, "lng": 8.68, "radius": 10}
         ],
-        "tier_2": [  # 25 km radius (large cities)
-            {"name": "Frankfurt", "lat": 50.11, "lng": 8.68, "radius": 25},
-            {"name": "Stuttgart", "lat": 48.78, "lng": 9.18, "radius": 25},
-            {"name": "Düsseldorf", "lat": 51.22, "lng": 6.78, "radius": 25},
-            {"name": "Leipzig", "lat": 51.34, "lng": 12.37, "radius": 25},
-        ],
-        "tier_3": [  # 20 km radius (medium cities)
-            {"name": "Nuremberg", "lat": 49.45, "lng": 11.08, "radius": 20},
-            {"name": "Hanover", "lat": 52.37, "lng": 9.73, "radius": 20},
+        "tier_2_large": [  # 15-20 km radius
+            {"name": "Stuttgart", "lat": 48.78, "lng": 9.18, "radius": 15},
+            {"name": "Düsseldorf", "lat": 51.22, "lng": 6.78, "radius": 15},
+            {"name": "Leipzig", "lat": 51.34, "lng": 12.37, "radius": 20},
+            {"name": "Dortmund (Ruhr Area)", "lat": 51.51, "lng": 7.46, "radius": 15},
+            {"name": "Essen (Ruhr Area)", "lat": 51.45, "lng": 7.01, "radius": 15},
             {"name": "Bremen", "lat": 53.07, "lng": 8.81, "radius": 20},
-        ]
-    },
-    "Spain": {
-        "tier_1": [  # 30 km radius
-            {"name": "Barcelona", "lat": 41.39, "lng": 2.17, "radius": 30},
-            {"name": "Madrid", "lat": 40.42, "lng": -3.70, "radius": 30},
+            {"name": "Dresden", "lat": 51.05, "lng": 13.73, "radius": 20}
         ],
-        "tier_2": [  # 25 km radius
-            {"name": "Valencia", "lat": 39.47, "lng": -0.38, "radius": 25},
-            {"name": "Seville", "lat": 37.39, "lng": -5.98, "radius": 25},
-            {"name": "Bilbao", "lat": 43.26, "lng": -2.92, "radius": 25},
+        "tier_3_regional": [  # 25 km radius
+            {"name": "Hanover", "lat": 52.37, "lng": 9.73, "radius": 25},
+            {"name": "Nuremberg", "lat": 49.45, "lng": 11.08, "radius": 25},
+            {"name": "Duisburg", "lat": 51.43, "lng": 6.76, "radius": 20},
+            {"name": "Wandsbek", "lat": 53.57, "lng": 10.07, "radius": 20},
+            {"name": "Bochum", "lat": 51.48, "lng": 7.21, "radius": 20},
+            {"name": "Wuppertal", "lat": 51.25, "lng": 7.15, "radius": 20},
+            {"name": "Bielefeld", "lat": 52.03, "lng": 8.53, "radius": 25},
+            {"name": "Bonn", "lat": 50.73, "lng": 7.10, "radius": 25},
+            {"name": "Münster", "lat": 51.96, "lng": 7.62, "radius": 25},
+            {"name": "Karlsruhe", "lat": 49.00, "lng": 8.40, "radius": 25},
+            {"name": "Mannheim", "lat": 49.48, "lng": 8.46, "radius": 25},
+            {"name": "Augsburg", "lat": 48.37, "lng": 10.89, "radius": 25}
         ],
-        "tier_3": [  # 20 km radius
-            {"name": "Malaga", "lat": 36.72, "lng": -4.42, "radius": 20},
-            {"name": "Palma", "lat": 39.57, "lng": 2.65, "radius": 20},
-            {"name": "Zaragoza", "lat": 41.65, "lng": -0.88, "radius": 20},
-        ]
-    },
-    "France": {
-        "tier_1": [  # 30 km radius
-            {"name": "Paris", "lat": 48.86, "lng": 2.35, "radius": 30},
-            {"name": "Lyon", "lat": 45.76, "lng": 4.84, "radius": 30},
-        ],
-        "tier_2": [  # 25 km radius
-            {"name": "Marseille", "lat": 43.30, "lng": 5.37, "radius": 25},
-            {"name": "Toulouse", "lat": 43.60, "lng": 1.44, "radius": 25},
-        ],
-        "tier_3": [  # 20 km radius
-            {"name": "Nice", "lat": 43.70, "lng": 7.26, "radius": 20},
-            {"name": "Bordeaux", "lat": 44.84, "lng": -0.58, "radius": 20},
-            {"name": "Lille", "lat": 50.63, "lng": 3.06, "radius": 20},
-            {"name": "Strasbourg", "lat": 48.58, "lng": 7.75, "radius": 20},
-            {"name": "Nantes", "lat": 47.22, "lng": -1.55, "radius": 20},
+        "tier_4_gaps": [  # 35-50 km radius (Rural/Coverage gaps)
+            {"name": "Freiburg (Southwest)", "lat": 47.99, "lng": 7.84, "radius": 35},
+            {"name": "Rostock (North)", "lat": 54.09, "lng": 12.10, "radius": 40},
+            {"name": "Kassel (Central)", "lat": 51.31, "lng": 9.47, "radius": 40},
+            {"name": "Magdeburg (East)", "lat": 52.12, "lng": 11.62, "radius": 40},
+            {"name": "Saarbrücken (West)", "lat": 49.23, "lng": 7.00, "radius": 40},
+            {"name": "Regensburg (Southeast)", "lat": 49.01, "lng": 12.09, "radius": 40}
         ]
     }
 }
 
-# Search queries per country (localized)
+# Search queries for Germany (restaurant-focused)
 SEARCH_QUERIES = {
     "Germany": [
-        "Vietnamesische Lebensmittel Großhandel",
-        "Chinesischer Lebensmittel Großhandel",
-        "Asiatischer Tiefkühlkost Großhandel HORECA",
-        "Frozen duck importer HORECA",
-    ],
-    "Spain": [
-        "Distribuidor comida vietnamita",
-        "Importador alimentos chinos congelados",
-        "Mayorista comida asiática HORECA",
-        "Frozen poultry distributor",
-    ],
-    "France": [
-        "Grossiste alimentation vietnamienne",
-        "Distributeur aliments chinois surgelés",
-        "Fournisseur restaurant asiatique HORECA",
-        "Distributeur volaille surgelée",
+        "Restaurant",
+        "Asiatisches Restaurant",
+        "Vietnamesisches Restaurant",
+        "Chinesisches Restaurant",
     ]
 }

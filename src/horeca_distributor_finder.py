@@ -246,21 +246,80 @@ def main():
             resume=True
         )
         
+        # ========== PHASE 4: FINAL FILTERING & EXPORT BY TYPE ==========
+        print("\n" + "="*70)
+        print("PHASE 4: FINAL FILTERING & EXPORT")
+        print("="*70)
+        
         # Filter to target restaurants with good product fit
-        final_leads = [
+        target_restaurants = [
             r for r in classified_leads
             if (r.get("is_target_customer") == True or r.get("is_target_customer") == "true")
             and r.get("product_fit_score") and float(r.get("product_fit_score", 0)) >= 5
+            and r.get("phone")  # Must have phone number for outreach
         ]
-        final_leads = sorted(
-            final_leads,
+        
+        print(f"\n📊 Total classified: {len(classified_leads)}")
+        print(f"📊 Target restaurants (score ≥5 + has phone): {len(target_restaurants)}")
+        
+        # Sort by product fit score
+        target_restaurants = sorted(
+            target_restaurants,
             key=lambda x: float(x.get("product_fit_score", 0)),
             reverse=True
         )
+        
+        # Group by restaurant type
+        by_type = {
+            "Chinese": [],
+            "Vietnamese": [],
+            "Turkish": [],
+            "Other": []
+        }
+        
+        for r in target_restaurants:
+            rtype = r.get("restaurant_type", "Other")
+            if rtype in by_type:
+                by_type[rtype].append(r)
+            else:
+                by_type["Other"].append(r)
+        
+        # Save separate files for each type
+        print("\n📁 Exporting by restaurant type:")
+        
+        chinese_file = os.path.join(Config.BASE_DIR, "FINAL_CHINESE_RESTAURANTS.csv")
+        vietnamese_file = os.path.join(Config.BASE_DIR, "FINAL_VIETNAMESE_RESTAURANTS.csv")
+        turkish_file = os.path.join(Config.BASE_DIR, "FINAL_TURKISH_RESTAURANTS.csv")
+        other_file = os.path.join(Config.BASE_DIR, "FINAL_OTHER_RESTAURANTS.csv")
+        
+        if by_type["Chinese"]:
+            FileManager.save_csv(by_type["Chinese"], chinese_file)
+        else:
+            print(f"  ⚠️  No Chinese restaurants to export")
+        
+        if by_type["Vietnamese"]:
+            FileManager.save_csv(by_type["Vietnamese"], vietnamese_file)
+        else:
+            print(f"  ⚠️  No Vietnamese restaurants to export")
+        
+        if by_type["Turkish"]:
+            FileManager.save_csv(by_type["Turkish"], turkish_file)
+        else:
+            print(f"  ⚠️  No Turkish restaurants to export")
+        
+        if by_type["Other"]:
+            FileManager.save_csv(by_type["Other"], other_file)
+        else:
+            print(f"  ℹ️  No 'Other' restaurants to export")
+        
+        # Save combined file (all target restaurants)
+        final_leads = target_restaurants
+        
     else:
+        # No classification - just use deduped leads
         final_leads = deduped_leads
 
-    # Save final prospects
+    # Save final prospects (combined)
     FileManager.save_csv(final_leads, Config.FINAL_PROSPECTS_FILE)
 
     # Generate report
@@ -276,7 +335,17 @@ def main():
     
     if Config.ENABLE_AI_CLASSIFICATION:
         print(f"  3. {Config.CLASSIFIED_LEADS_FILE} (after AI classification)")
-    print(f"  4. {Config.FINAL_PROSPECTS_FILE} (final prospects - MAIN FILE)")
+        print(f"\n  📁 By Restaurant Type:")
+        if os.path.exists(os.path.join(Config.BASE_DIR, "FINAL_CHINESE_RESTAURANTS.csv")):
+            print(f"     🥡 FINAL_CHINESE_RESTAURANTS.csv ({len(by_type.get('Chinese', []))} restaurants)")
+        if os.path.exists(os.path.join(Config.BASE_DIR, "FINAL_VIETNAMESE_RESTAURANTS.csv")):
+            print(f"     🍜 FINAL_VIETNAMESE_RESTAURANTS.csv ({len(by_type.get('Vietnamese', []))} restaurants)")
+        if os.path.exists(os.path.join(Config.BASE_DIR, "FINAL_TURKISH_RESTAURANTS.csv")):
+            print(f"     🥙 FINAL_TURKISH_RESTAURANTS.csv ({len(by_type.get('Turkish', []))} restaurants)")
+        if os.path.exists(os.path.join(Config.BASE_DIR, "FINAL_OTHER_RESTAURANTS.csv")):
+            print(f"     🍽️  FINAL_OTHER_RESTAURANTS.csv ({len(by_type.get('Other', []))} restaurants)")
+    
+    print(f"\n  4. {Config.FINAL_PROSPECTS_FILE} (all target restaurants - MAIN FILE)")
     print("\n")
 
 

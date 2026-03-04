@@ -71,7 +71,9 @@ class GoogleMapsScraper:
                         }
                     }
                 },
-                "maxResultCount": 20
+                "maxResultCount": 20,
+                # "includedTypes": ["restaurant"],  # Optional: Filter to restaurants only (excludes cafes, bars, etc.)
+                # Other available types: "chinese_restaurant", "meal_takeaway", etc.
             }
 
             if page_token:

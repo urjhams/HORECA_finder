@@ -58,5 +58,6 @@ SEARCH_QUERIES = {
         "Asiatisches Restaurant",
         "Vietnamesisches Restaurant",
         "Chinesisches Restaurant",
+        "Türkisches Restaurant",
     ]
 }

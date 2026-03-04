@@ -29,38 +29,53 @@ class AIClassifier:
             response_mime_type='application/json',
         )
 
-    def classify_batch(self, records: List[Dict], prompt_generator: Callable[[List[Dict]], str]) -> List[Dict]:
-        """Classify a batch of records using LLM"""
+    def classify_batch(self, records: List[Dict], prompt_generator: Callable[[List[Dict]], str], max_retries: int = 3) -> List[Dict]:
+        """Classify a batch of records using LLM with automatic retry on failures"""
         
         if not self.api_key:
             print("⚠️  No API key configured. Skipping batch.")
             return [{}] * len(records)
 
-        try:
-            prompt = prompt_generator(records)
+        for attempt in range(max_retries):
+            try:
+                prompt = prompt_generator(records)
 
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=self.config,
-            )
+                response = self.client.models.generate_content(
+                    model=self.model,
+                    contents=prompt,
+                    config=self.config,
+                )
 
-            result_text = response.text.strip()
-            # Clean up potential markdown code blocks
-            if result_text.startswith("```json"):
-                result_text = result_text[7:]
-            if result_text.endswith("```"):
-                result_text = result_text[:-3]
-            
-            results_list = json.loads(result_text)
-            
-            self.call_count += 1
-            return results_list
+                result_text = response.text.strip()
+                # Clean up potential markdown code blocks
+                if result_text.startswith("```json"):
+                    result_text = result_text[7:]
+                if result_text.endswith("```"):
+                    result_text = result_text[:-3]
+                
+                results_list = json.loads(result_text)
+                
+                self.call_count += 1
+                return results_list
 
-        except Exception as e:
-            print(f"    ❌ Batch classification error: {str(e)}")
-            # Return empty dicts for failed batch to maintain length alignment
-            return [{}] * len(records)
+            except Exception as e:
+                error_str = str(e)
+                is_last_attempt = (attempt == max_retries - 1)
+                
+                # Check if it's a retryable error (503, 429, network issues)
+                is_retryable = any(code in error_str for code in ['503', '429', 'UNAVAILABLE', 'RESOURCE_EXHAUSTED', 'DEADLINE_EXCEEDED'])
+                
+                if is_retryable and not is_last_attempt:
+                    wait_time = 30 * (attempt + 1)  # 30s, 60s, 90s
+                    print(f"    ⚠️  Batch error (attempt {attempt + 1}/{max_retries}): {error_str}")
+                    print(f"    ⏳ Retrying in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"    ❌ Batch classification error: {error_str}")
+                    if is_retryable:
+                        print(f"    💾 Progress saved. You can resume later with --resume --ai-classify")
+                    # Return empty dicts for failed batch to maintain length alignment
+                    return [{}] * len(records)
 
     def classify_all(self, records: List[Dict], prompt_generator: Callable[[List[Dict]], str], 
                     output_file: str, batch_size: int = 10, resume: bool = True) -> List[Dict]:

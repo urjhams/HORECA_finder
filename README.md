@@ -48,6 +48,7 @@ python3 -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
+
 ```
 
 ### 4. Get Google Maps API Key
@@ -85,7 +86,8 @@ nano .env  # or use your editor
 ```
 
 Fill in:
-```
+
+```plaintext
 GOOGLE_MAPS_API_KEY=AIza...your...key...here
 GEMINI_API_KEY=your_gemini_api_key_here  # Optional - for AI classification
 ```
@@ -93,11 +95,13 @@ GEMINI_API_KEY=your_gemini_api_key_here  # Optional - for AI classification
 ### 7. Run the Script
 
 **Basic Usage (Scraping Only):**
+
 ```bash
 python src/horeca_distributor_finder.py
 ```
 
 **With AI Classification:**
+
 ```bash
 python src/horeca_distributor_finder.py --ai-classify
 ```
@@ -105,11 +109,13 @@ python src/horeca_distributor_finder.py --ai-classify
 **Advanced Options:**
 
 1. **Specify Output Directory:**
+
    ```bash
    python src/horeca_distributor_finder.py my_project
    ```
 
 2. **Resume from Previous Run:**
+
    ```bash
    python src/horeca_distributor_finder.py --resume --ai-classify
    ```
@@ -137,6 +143,7 @@ PHASE 1: GOOGLE MAPS SCRAPING
 ```
 
 When complete, it will save 4 CSV files:
+
 - `1_raw_leads.csv` - Raw results from Google Maps
 - `2_deduped_leads.csv` - After deduplication
 - `FINAL_HORECA_PROSPECTS.csv` - **MAIN FILE** (clean, ready for outreach)
@@ -150,11 +157,13 @@ When complete, it will save 4 CSV files:
 Main file with columns:
 
 When complete, it will save CSV files:
+
 - `1_raw_restaurants.csv` - Raw results from Google Maps
 - `2_deduped_restaurants.csv` - After deduplication
 - `FINAL_RESTAURANT_PROSPECTS.csv` - **MAIN FILE** (all target restaurants)
 
 With AI classification enabled:
+
 - `3_classified_restaurants.csv` - With AI analysis
 - `FINAL_CHINESE_RESTAURANTS.csv` - Chinese restaurants only
 - `FINAL_VIETNAMESE_RESTAURANTS.csv` - Vietnamese restaurants only
@@ -172,6 +181,7 @@ With AI classification enabled:
 **FINAL_RESTAURANT_PROSPECTS.csv** - All target restaurants combined
 
 Columns:
+
 ```
 id, company_name, street_address, city, postal_code, full_address,
 latitude, longitude, phone, website, rating, review_count, types,
@@ -180,6 +190,7 @@ reasoning, contact_recommendation, source, search_query, scrape_timestamp
 ```
 
 **Example:**
+
 ```csv
 id,company_name,city,phone,website,rating,restaurant_type,business_model,product_fit_score,reasoning,contact_recommendation
 ChIJxxx,Pho Vietnam Bistro,Berlin,+49 30 1234567,https://pho-vietnam.de,4.5,Vietnamese,bistro,9,"Vietnamese bistro likely has high takeaway volume",High priority
@@ -187,6 +198,7 @@ ChIJyyy,Döner Kebab Express,Hamburg,+49 40 9876543,https://doener-express.de,4.
 ```
 
 **Use these CSVs to:**
+
 - Contact restaurants directly (phone)
 - Visit restaurant websites for more info
 - Target by cuisine type for customized pitches
@@ -219,14 +231,17 @@ start FINAL_VIETNAMESE_RESTAURANTS.csv
 ### 3. Outreach Strategy
 
 **For Chinese Restaurants:**
+
 - Products: Packaging for dim sum, spring rolls, fried rice takeaway
 - Pitch: "We supply high-quality paper boxes perfect for Chinese takeaway"
 
 **For Vietnamese Restaurants:**
+
 - Products: Pho containers, spring roll boxes, bánh mì packaging
 - Pitch: "Specialty packaging for Vietnamese cuisine takeaway orders"
 
 **For Turkish Restaurants:**
+
 - Products: Döner boxes, wrap containers, kebab packaging
 - Pitch: "Premium packaging solutions for döner and kebab businesses"
 
@@ -304,6 +319,7 @@ The script uses **Google Gemini** for classification with optimized batch proces
 ### Classification Fields
 
 For each restaurant, AI determines:
+
 - `restaurant_type`: Chinese, Vietnamese, Turkish, Other, Not a Restaurant
 - `business_model`: bistro, quick-service, gastronomy, fine-dining, cafe, other
 - `is_target_customer`: true/false (good fit for supplies?)
@@ -326,6 +342,7 @@ cat .env  # Check contents
 ### Error: "quota exceeded" or "zero results"
 
 **Causes:**
+
 - API quotas reached (Google gives $200/month free; check billing)
 - API not enabled (go to Cloud Console → enable "Places API (New)")
 - Search query too specific (try broader queries)
@@ -363,12 +380,14 @@ pip install google-genai
 ## Data Privacy & GDPR
 
 ✅ **This script respects GDPR:**
+
 - Only scrapes **public** Google Maps data
 - No personal data (PII) collected
 - No cookies or tracking
 - Data stored locally, not shared
 
 **Note:** When you contact restaurants, **you must comply with GDPR:**
+
 - B2B outreach is OK if business-related
 - Keep communications professional
 - Respect opt-out requests
@@ -417,18 +436,21 @@ Output files (after running):
 ## Pipeline Overview
 
 **Phase 1: Scraping**
+
 - Google Maps Text Search API
 - 32 German cities (4 tiers: mega/large/regional/gaps)
 - 4 search queries: Restaurant, Asian, Vietnamese, Chinese
 - ~1,000-3,000 raw results
 
 **Phase 2: Deduplication**
+
 - Fuzzy name matching (85% threshold)
 - Phone/website matching
 - Handles restaurant chains (same name, different cities)
 - ~800-2,000 unique restaurants
 
 **Phase 3: AI Classification (Optional)**
+
 - Google Gemini 2.5 Flash Lite
 - Batch size: 40 restaurants per call
 - Classifies: Chinese/Vietnamese/Turkish/Other
@@ -436,6 +458,7 @@ Output files (after running):
 - ~500-1,000 target restaurants
 
 **Phase 4: Export by Type**
+
 - Filters: score ≥5, has phone, is_target_customer
 - Separate CSV files per restaurant type
 - Sorted by product_fit_score
@@ -452,12 +475,12 @@ This script is for internal business use. Do not resell the data or use for spam
 ## Contact & Questions
 
 For issues or questions:
-- Google Maps API docs: https://developers.google.com/maps/documentation/places
-- Google Gemini docs: https://ai.google.dev/docs
-- FuzzyWuzzy docs: https://github.com/seatgeek/fuzzywuzzy
+
+- Google Maps API docs: <https://developers.google.com/maps/documentation/places>
+- Google Gemini docs: <https://ai.google.dev/docs>
+- FuzzyWuzzy docs: <https://github.com/seatgeek/fuzzywuzzy>
 
 ---
 
 **Last updated:** March 3, 2026  
 **Status:** Production-ready ✅
-

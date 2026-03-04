@@ -73,7 +73,7 @@ class Config:
     FUZZY_MATCH_THRESHOLD = 85  # 0-100 for company name similarity
 
     # Classification
-    ENABLE_AI_CLASSIFICATION = False  # Default to False, enable via flag
+    ENABLE_AI_CLASSIFICATION: bool = False  # Default to False, enable via flag
     BATCH_SIZE = 40  # Number of records to classify in one API call (optimized for restaurants)
 
 
